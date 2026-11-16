@@ -8,13 +8,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.fitnessmarket.myworkerlodger.WorkerLodgerApplication
 import com.fitnessmarket.myworkerlodger.domain.Housing
-import com.fitnessmarket.myworkerlodger.ui.common.runCommand
 import com.fitnessmarket.myworkerlodger.domain.Property
 import com.fitnessmarket.myworkerlodger.domain.PropertyId
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.Sex
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
 import com.fitnessmarket.myworkerlodger.ui.common.onIo
+import com.fitnessmarket.myworkerlodger.ui.common.runCommand
 import com.fitnessmarket.myworkerlodger.ui.navigation.Routes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

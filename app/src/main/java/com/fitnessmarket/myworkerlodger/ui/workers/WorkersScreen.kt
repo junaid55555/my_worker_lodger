@@ -39,6 +39,7 @@ import com.fitnessmarket.myworkerlodger.ui.common.onIo
 import com.fitnessmarket.myworkerlodger.ui.worker.WorkerForm
 import com.fitnessmarket.myworkerlodger.ui.worker.WorkerFormDialog
 import com.fitnessmarket.myworkerlodger.ui.worker.saveWorkerForm
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -60,9 +61,13 @@ class WorkersViewModel(private val housing: Housing) : ViewModel() {
     private val _state = MutableStateFlow(WorkersUiState())
     val state = _state.asStateFlow()
 
+    /** The latest load; a newer search cancels it so an older result can never overwrite a newer one. */
+    private var loading: Job? = null
+
     fun refresh() {
         val search = _state.value.search
-        viewModelScope.launch {
+        loading?.cancel()
+        loading = viewModelScope.launch {
             val (workers, employers) = onIo { housing.workers(search = search) to housing.employers() }
             _state.update { it.copy(loaded = true, workers = workers, employers = employers) }
         }

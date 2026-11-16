@@ -63,7 +63,7 @@ class EmployerDetailViewModel(private val housing: Housing, private val employer
 
     fun refresh() {
         viewModelScope.launch {
-            val (employer, workers) = onIo { housing.employer(employerId) to housing.workers(employer = employerId) }
+            val (employer, workers) = onIo { housing.employer(employerId) to housing.workers(employerId = employerId) }
             _state.update { it.copy(loaded = true, employer = employer, workers = workers) }
         }
     }

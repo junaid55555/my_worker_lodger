@@ -38,6 +38,7 @@ import com.fitnessmarket.myworkerlodger.ui.common.SexChoice
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntryDialog
 import com.fitnessmarket.myworkerlodger.ui.labelRes
+import com.fitnessmarket.myworkerlodger.ui.summary
 import com.fitnessmarket.myworkerlodger.ui.theme.MyWorkerLodgerTheme
 
 @Composable
@@ -109,10 +110,20 @@ private fun PropertyDetailContent(
         }
         ContentOrMessage(innerPadding, message) {
             LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) {
+                item {
+                    ListItem(
+                        overlineContent = { Text(stringResource(R.string.today)) },
+                        headlineContent = { Text(state.occupancy.summary()) },
+                    )
+                    HorizontalDivider()
+                }
                 items(state.rooms, key = { it.id.value }) { room ->
                     ListItem(
                         headlineContent = { Text(room.name) },
-                        supportingContent = { Text(stringResource(room.sex.labelRes())) },
+                        supportingContent = {
+                            val occupancy = state.roomOccupancy[room.id]?.summary().orEmpty()
+                            Text(stringResource(R.string.room_summary, stringResource(room.sex.labelRes()), occupancy))
+                        },
                         modifier = Modifier.clickable { onOpenRoom(room.id) },
                     )
                     HorizontalDivider()

@@ -65,6 +65,18 @@ class CorrectStayTest {
     }
 
     @Test
+    fun `a Check-out can be corrected to the date the next Stay begins`() {
+        housing.correctStay(current.id, checkIn = today.minusDays(8), checkOut = null).accepted()
+
+        housing.correctStay(earlier.id, checkIn = today.minusDays(20), checkOut = today.minusDays(8)).accepted()
+    }
+
+    @Test
+    fun `correcting a current Stay's Check-in back into the earlier Stay is rejected`() {
+        assertRejectedAndUnchanged(Rejection.OverlappingStay, housing.correctStay(current.id, today.minusDays(12), null))
+    }
+
+    @Test
     fun `a correction that overlaps another Stay in the same Bed is rejected`() {
         housing.checkIn(bilal.id, bed1A.id, today.minusDays(5)).accepted()
 

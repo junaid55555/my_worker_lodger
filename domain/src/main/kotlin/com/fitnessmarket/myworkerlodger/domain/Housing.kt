@@ -91,6 +91,9 @@ class Housing(
     /** Whether someone is staying in the Bed now. */
     private fun hasCurrentStay(bedId: BedId, stays: List<Stay>): Boolean = stays.any { it.bedId == bedId && it.isCurrent }
 
+    /** Whether the Worker has a current Stay, that is, is housed now. */
+    private fun isHoused(workerId: WorkerId, stays: List<Stay>): Boolean = stays.any { it.workerId == workerId && it.isCurrent }
+
     fun beds(roomId: RoomId): List<Bed> = store.beds(roomId).sortedWith(compareBy(NaturalOrder) { it.label })
 
     fun room(id: RoomId): Room? = store.room(id)
@@ -165,7 +168,7 @@ class Housing(
         val room = store.room(bed.roomId) ?: return Rejection.RoomNotFound
         return when {
             date.isAfter(today.date()) -> Rejection.FutureDate
-            stays.any { it.workerId == workerId && it.isCurrent } -> Rejection.WorkerAlreadyHoused
+            isHoused(workerId, stays) -> Rejection.WorkerAlreadyHoused
             hasCurrentStay(bedId, stays) -> Rejection.BedOccupied
             !bed.inService -> Rejection.BedOutOfService
             worker.sex != room.sex -> Rejection.SexMismatch
@@ -257,6 +260,24 @@ class Housing(
             .toMap()
     }
 
+    /** Today's Occupancy of one Room. */
+    fun roomOccupancy(roomId: RoomId): Occupancy = occupancyOf(store.beds(roomId), store.stays())
+
+    /** Today's Occupancy of one Property: all its Rooms together. */
+    fun propertyOccupancy(propertyId: PropertyId): Occupancy {
+        val stays = store.stays()
+        return store.rooms(propertyId).fold(Occupancy.NONE) { total, room -> total + occupancyOf(store.beds(room.id), stays) }
+    }
+
+    /** Today's Occupancy across every Property. */
+    fun overallOccupancy(): Occupancy =
+        store.properties().fold(Occupancy.NONE) { total, property -> total + propertyOccupancy(property.id) }
+
+    private fun occupancyOf(beds: List<Bed>, stays: List<Stay>): Occupancy {
+        val inService = beds.filter { it.inService }
+        return Occupancy(bedsWithCurrentStay = inService.count { hasCurrentStay(it.id, stays) }, inServiceBeds = inService.size)
+    }
+
     /** The Bed with its Room and Property, or null if there's no such Bed. */
     fun bedDetails(bedId: BedId): BedDetails? {
         val bed = store.bed(bedId) ?: return null
@@ -290,10 +311,10 @@ class Housing(
      */
     fun workers(employerId: EmployerId? = null, search: String = "", housedOnly: Boolean = false): List<Worker> {
         val text = search.trim()
-        val housed = if (housedOnly) store.stays().filter { it.isCurrent }.map { it.workerId }.toSet() else emptySet()
+        val stays = store.stays()
         return store.workers()
             .filter { employerId == null || it.employerId == employerId }
-            .filter { !housedOnly || it.id in housed }
+            .filter { !housedOnly || isHoused(it.id, stays) }
             .filter { it.name.contains(text, ignoreCase = true) || it.staffNumber.contains(text, ignoreCase = true) }
             .sortedWith(compareBy(NaturalOrder) { it.name })
     }

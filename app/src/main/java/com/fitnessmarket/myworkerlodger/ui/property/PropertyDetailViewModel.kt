@@ -8,9 +8,11 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.fitnessmarket.myworkerlodger.WorkerLodgerApplication
 import com.fitnessmarket.myworkerlodger.domain.Housing
+import com.fitnessmarket.myworkerlodger.domain.Occupancy
 import com.fitnessmarket.myworkerlodger.domain.Property
 import com.fitnessmarket.myworkerlodger.domain.PropertyId
 import com.fitnessmarket.myworkerlodger.domain.Room
+import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Sex
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
 import com.fitnessmarket.myworkerlodger.ui.common.onIo
@@ -27,6 +29,9 @@ data class PropertyDetailUiState(
     /** Null once loaded means the Property no longer exists. */
     val property: Property? = null,
     val rooms: List<Room> = emptyList(),
+    /** Today's Occupancy of the whole Property, and of each of its Rooms. */
+    val occupancy: Occupancy = Occupancy.NONE,
+    val roomOccupancy: Map<RoomId, Occupancy> = emptyMap(),
     val dialog: PropertyDialog? = null,
 )
 
@@ -51,8 +56,17 @@ class PropertyDetailViewModel(private val housing: Housing, private val property
 
     fun refresh() {
         viewModelScope.launch {
-            val (property, rooms) = onIo { housing.property(propertyId) to housing.rooms(propertyId) }
-            _state.update { it.copy(loaded = true, property = property, rooms = rooms) }
+            val loaded = onIo {
+                val rooms = housing.rooms(propertyId)
+                PropertyDetailUiState(
+                    loaded = true,
+                    property = housing.property(propertyId),
+                    rooms = rooms,
+                    occupancy = housing.propertyOccupancy(propertyId),
+                    roomOccupancy = rooms.associate { it.id to housing.roomOccupancy(it.id) },
+                )
+            }
+            _state.update { loaded.copy(dialog = it.dialog) }
         }
     }
 

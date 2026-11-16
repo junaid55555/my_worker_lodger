@@ -39,6 +39,7 @@ import com.fitnessmarket.myworkerlodger.domain.Housing
 import com.fitnessmarket.myworkerlodger.domain.WorkerId
 import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
 import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
+import com.fitnessmarket.myworkerlodger.ui.common.SectionHeading
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntryDialog
@@ -151,11 +152,7 @@ fun BedDetailScreen(
                             },
                         )
                         HorizontalDivider()
-                        Text(
-                            stringResource(R.string.stay_history),
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
-                        )
+                        SectionHeading(R.string.stay_history)
                         if (state.stays.isEmpty()) {
                             Text(stringResource(R.string.no_stays_in_bed), modifier = Modifier.padding(horizontal = 16.dp))
                         }

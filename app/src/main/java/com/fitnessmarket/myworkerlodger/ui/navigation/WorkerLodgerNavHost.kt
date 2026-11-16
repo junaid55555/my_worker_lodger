@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -31,6 +32,7 @@ import com.fitnessmarket.myworkerlodger.R
 import com.fitnessmarket.myworkerlodger.ui.bed.BedDetailScreen
 import com.fitnessmarket.myworkerlodger.ui.employer.EmployerDetailScreen
 import com.fitnessmarket.myworkerlodger.ui.employers.EmployersScreen
+import com.fitnessmarket.myworkerlodger.ui.overview.OverviewScreen
 import com.fitnessmarket.myworkerlodger.ui.properties.PropertiesScreen
 import com.fitnessmarket.myworkerlodger.ui.property.PropertyDetailScreen
 import com.fitnessmarket.myworkerlodger.ui.room.RoomDetailScreen
@@ -45,6 +47,7 @@ object Routes {
     const val EMPLOYER_ID = "employerId"
     const val WORKER_ID = "workerId"
 
+    const val OVERVIEW = "overview"
     const val PROPERTIES = "properties"
     const val PROPERTY = "property/{$PROPERTY_ID}"
     const val ROOM = "room/{$ROOM_ID}"
@@ -63,7 +66,8 @@ object Routes {
 
 /** The sections reachable from the bottom navigation bar. */
 private enum class Section(val route: String, @StringRes val label: Int, val icon: ImageVector) {
-    Properties(Routes.PROPERTIES, R.string.properties_title, Icons.Filled.Home),
+    Overview(Routes.OVERVIEW, R.string.overview_title, Icons.Filled.Home),
+    Properties(Routes.PROPERTIES, R.string.properties_title, Icons.AutoMirrored.Filled.List),
     Workers(Routes.WORKERS, R.string.workers_title, Icons.Filled.Person),
     Employers(Routes.EMPLOYERS, R.string.employers_title, Icons.Filled.AccountBox),
 }
@@ -94,9 +98,12 @@ fun WorkerLodgerNavHost() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.PROPERTIES,
+            startDestination = Routes.OVERVIEW,
             modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
         ) {
+            composable(Routes.OVERVIEW) {
+                OverviewScreen(onOpenProperty = { navController.navigate(Routes.property(it.value)) })
+            }
             composable(Routes.PROPERTIES) {
                 PropertiesScreen(onOpenProperty = { navController.navigate(Routes.property(it.value)) })
             }

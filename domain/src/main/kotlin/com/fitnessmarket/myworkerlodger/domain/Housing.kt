@@ -94,9 +94,7 @@ class Housing(
 
     fun addWorker(employerId: EmployerId, staffNumber: String, name: String, sex: Sex): Outcome<Worker> {
         if (store.employer(employerId) == null) return Outcome.Rejected(Rejection.EmployerNotFound)
-        if (staffNumber.isBlank()) return Outcome.Rejected(Rejection.BlankStaffNumber)
-        if (name.isBlank()) return Outcome.Rejected(Rejection.BlankName)
-        if (staffNumberTaken(employerId, staffNumber)) return Outcome.Rejected(Rejection.DuplicateStaffNumber)
+        workerDetailsProblem(employerId, staffNumber, name, except = null)?.let { return Outcome.Rejected(it) }
         val worker = Worker(WorkerId(UUID.randomUUID().toString()), employerId, staffNumber.trim(), name.trim(), sex)
         store.saveWorker(worker)
         return Outcome.Accepted(worker)
@@ -104,11 +102,7 @@ class Housing(
 
     fun editWorker(id: WorkerId, staffNumber: String, name: String): Outcome<Worker> {
         val worker = store.worker(id) ?: return Outcome.Rejected(Rejection.WorkerNotFound)
-        if (staffNumber.isBlank()) return Outcome.Rejected(Rejection.BlankStaffNumber)
-        if (name.isBlank()) return Outcome.Rejected(Rejection.BlankName)
-        if (staffNumberTaken(worker.employerId, staffNumber, except = id)) {
-            return Outcome.Rejected(Rejection.DuplicateStaffNumber)
-        }
+        workerDetailsProblem(worker.employerId, staffNumber, name, except = id)?.let { return Outcome.Rejected(it) }
         val edited = worker.copy(staffNumber = staffNumber.trim(), name = name.trim())
         store.saveWorker(edited)
         return Outcome.Accepted(edited)
@@ -183,20 +177,29 @@ class Housing(
     }
 
     /** Staff Numbers are compared ignoring case and surrounding spaces, so "E-1042" and " e-1042" clash. */
-    private fun staffNumberTaken(employerId: EmployerId, staffNumber: String, except: WorkerId? = null): Boolean =
+    private fun staffNumberTaken(employerId: EmployerId, staffNumber: String, except: WorkerId?): Boolean =
         store.workers().any {
             it.id != except && it.employerId == employerId &&
                 it.staffNumber.equals(staffNumber.trim(), ignoreCase = true)
         }
 
+    /** What's wrong with these Worker details, if anything; [except] is the Worker being edited. */
+    private fun workerDetailsProblem(employerId: EmployerId, staffNumber: String, name: String, except: WorkerId?): Rejection? =
+        when {
+            staffNumber.isBlank() -> Rejection.BlankStaffNumber
+            name.isBlank() -> Rejection.BlankName
+            staffNumberTaken(employerId, staffNumber, except) -> Rejection.DuplicateStaffNumber
+            else -> null
+        }
+
     /**
-     * Workers in natural order of name, optionally only those of one [employer], and only those whose
+     * Workers in natural order of name, optionally only those of one Employer ([employerId]), and only those whose
      * name or Staff Number contains [search] (ignoring case). A blank [search] matches everyone.
      */
-    fun workers(employer: EmployerId? = null, search: String = ""): List<Worker> {
+    fun workers(employerId: EmployerId? = null, search: String = ""): List<Worker> {
         val text = search.trim()
         return store.workers()
-            .filter { employer == null || it.employerId == employer }
+            .filter { employerId == null || it.employerId == employerId }
             .filter { it.name.contains(text, ignoreCase = true) || it.staffNumber.contains(text, ignoreCase = true) }
             .sortedWith(compareBy(NaturalOrder) { it.name })
     }

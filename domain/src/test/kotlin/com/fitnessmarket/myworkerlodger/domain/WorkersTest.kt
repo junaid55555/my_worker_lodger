@@ -128,7 +128,7 @@ class WorkersTest {
         housing.addWorker(gulf.id, "1042", "Ahmed Khan", Sex.Male)
         housing.addWorker(noor.id, "77", "Priya Nair", Sex.Female)
 
-        assertEquals(listOf("Priya Nair"), housing.workers(employer = noor.id).map { it.name })
+        assertEquals(listOf("Priya Nair"), housing.workers(employerId = noor.id).map { it.name })
     }
 
     @Test

@@ -30,7 +30,7 @@
     <string name="bed_title">Bed %1$s</string>
 
     <string name="employers_title">Employers</string>
-    <string name="no_employers_yet">No Employers yet. Add the companies whose Workers you house.</string>
+    <string name="no_employers_yet">No Employers yet. Add the Employers whose Workers you house.</string>
     <string name="no_employers_yet_short">Add an Employer first</string>
     <string name="add_employer">Add Employer</string>
     <string name="rename_employer">Rename Employer</string>

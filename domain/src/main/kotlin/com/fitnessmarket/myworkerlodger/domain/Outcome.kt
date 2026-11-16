@@ -77,6 +77,9 @@ sealed interface Rejection {
     /** The Employer still has Workers, so it can't be deleted. */
     data object EmployerHasWorkers : Rejection
 
-    /** The change would leave a Worker with a current Stay in a Room of the other sex. */
+    /** Changing the Room's sex would leave a Worker staying in it in a Room of the other sex. */
     data object WouldMixRoom : Rejection
+
+    /** Changing the Worker's sex would leave them staying in a Room for the other sex. */
+    data object CurrentRoomIsOtherSex : Rejection
 }

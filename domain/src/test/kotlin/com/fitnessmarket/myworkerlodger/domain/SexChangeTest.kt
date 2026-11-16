@@ -50,7 +50,7 @@ class SexChangeTest {
     fun `a housed Worker can't change to the sex the Room isn't for, and nothing else changes`() {
         housing.checkIn(ahmed.id, bed.id, today).accepted()
 
-        assertEquals(Outcome.Rejected(Rejection.WouldMixRoom), housing.editWorker(ahmed.id, "1043", "Ahmed K", Sex.Female))
+        assertEquals(Outcome.Rejected(Rejection.CurrentRoomIsOtherSex), housing.editWorker(ahmed.id, "1043", "Ahmed K", Sex.Female))
         assertEquals(ahmed, housing.worker(ahmed.id))
     }
 

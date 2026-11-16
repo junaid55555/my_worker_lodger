@@ -56,11 +56,7 @@ class Housing(
     fun editRoom(id: RoomId, name: String, sex: Sex): Outcome<Room> {
         val room = store.room(id) ?: return Outcome.Rejected(Rejection.RoomNotFound)
         if (name.isBlank()) return Outcome.Rejected(Rejection.BlankName)
-        if (sex != room.sex) {
-            val bedIds = store.beds(id).map { it.id }.toSet()
-            val housedHere = store.stays().filter { it.isCurrent && it.bedId in bedIds }.mapNotNull { store.worker(it.workerId) }
-            if (housedHere.any { it.sex != sex }) return Outcome.Rejected(Rejection.WouldMixRoom)
-        }
+        if (sex != room.sex && workersByBed(id).values.any { it.sex != sex }) return Outcome.Rejected(Rejection.WouldMixRoom)
         val edited = room.copy(name = name.trim(), sex = sex)
         store.saveRoom(edited)
         return Outcome.Accepted(edited)
@@ -157,7 +153,7 @@ class Housing(
         val worker = store.worker(id) ?: return Outcome.Rejected(Rejection.WorkerNotFound)
         workerDetailsProblem(worker.employerId, staffNumber, name, except = id)?.let { return Outcome.Rejected(it) }
         val currentRoom = currentStay(id)?.room
-        if (currentRoom != null && currentRoom.sex != sex) return Outcome.Rejected(Rejection.WouldMixRoom)
+        if (currentRoom != null && currentRoom.sex != sex) return Outcome.Rejected(Rejection.CurrentRoomIsOtherSex)
         val edited = worker.copy(staffNumber = staffNumber.trim(), name = name.trim(), sex = sex)
         store.saveWorker(edited)
         return Outcome.Accepted(edited)

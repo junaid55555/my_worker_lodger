@@ -83,7 +83,7 @@ class RoomDetailViewModel(private val housing: Housing, private val roomId: Room
     }
 
     fun chooseSex(sex: Sex) =
-        _state.update { state -> state.copy(dialog = (state.dialog as? RoomDialog.Edit)?.copy(sex = sex) ?: state.dialog) }
+        _state.update { state -> state.copy(dialog = (state.dialog as? RoomDialog.Edit)?.let { it.copy(sex = sex, entry = it.entry.edited(it.entry.text)) } ?: state.dialog) }
 
     fun startAddingBeds() = open(RoomDialog.AddBeds(TextEntry()))
 

@@ -1,12 +1,11 @@
 package com.fitnessmarket.myworkerlodger.domain
 
-import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PropertiesTest {
 
-    private val housing = Housing(store = InMemoryHousingStore(), today = { LocalDate.of(2026, 11, 16) })
+    private val housing = newHousing()
 
     @Test
     fun `an added Property appears in the list of Properties`() {
@@ -68,11 +67,17 @@ class PropertiesTest {
     }
 
     @Test
-    fun `renaming a Property that does not exist is rejected`() {
-        val outcome = housing.renameProperty(PropertyId("no-such-property"), "Al Quoz Block B")
+    fun `renaming a Property that does not exist is rejected, even with a blank name`() {
+        val outcome = housing.renameProperty(PropertyId("no-such-property"), " ")
 
         assertEquals(Outcome.Rejected(Rejection.PropertyNotFound), outcome)
     }
 
-    private fun <T> Outcome<T>.accepted(): T = (this as Outcome.Accepted<T>).value
+    @Test
+    fun `a Property can be found by its id, and an unknown id finds nothing`() {
+        val property = housing.addProperty("Al Quoz Block A").accepted()
+
+        assertEquals(property, housing.property(property.id))
+        assertEquals(null, housing.property(PropertyId("no-such-property")))
+    }
 }

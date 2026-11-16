@@ -1,14 +1,36 @@
 <resources>
     <string name="app_name">MyWorkerLodger</string>
 
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+    <string name="rename">Rename</string>
+
     <string name="properties_title">Properties</string>
     <string name="no_properties_yet">No Properties yet. Add your first one.</string>
     <string name="add_property">Add Property</string>
     <string name="rename_property">Rename Property</string>
     <string name="property_name">Property name</string>
-    <string name="save">Save</string>
-    <string name="cancel">Cancel</string>
+
+    <string name="no_rooms_yet">No Rooms yet. Add the first Room in this Property.</string>
+    <string name="add_room">Add Room</string>
+    <string name="rename_room">Rename Room</string>
+    <string name="room_name">Room name</string>
+    <string name="room_name_hint">You can include the floor or block, for example B-204.</string>
+    <string name="sex_male">Male</string>
+    <string name="sex_female">Female</string>
+
+    <string name="no_beds_yet">No Beds yet. Add the Beds in this Room.</string>
+    <string name="add_beds">Add Beds</string>
+    <string name="relabel_bed">Relabel Bed</string>
+    <string name="bed_label">Bed label</string>
+    <string name="bed_labels">Bed labels</string>
+    <string name="bed_labels_hint">To add several Beds, separate the labels with commas, for example 1A, 1B, 2A.</string>
+    <string name="bed_title">Bed %1$s</string>
 
     <string name="rejection_blank_name">A name can\'t be blank. Enter a name.</string>
+    <string name="rejection_blank_label">A Bed label can\'t be blank. Enter a label for every Bed.</string>
     <string name="rejection_property_not_found">This Property no longer exists.</string>
+    <string name="rejection_room_not_found">This Room no longer exists.</string>
+    <string name="rejection_bed_not_found">This Bed no longer exists.</string>
 </resources>

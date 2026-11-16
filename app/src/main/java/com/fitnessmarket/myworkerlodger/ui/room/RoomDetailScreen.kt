@@ -1,6 +1,13 @@
 package com.fitnessmarket.myworkerlodger.ui.room
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,26 +52,28 @@ fun RoomDetailScreen(
         onBack = onBack,
         onRename = viewModel::startRenaming,
         onAddBeds = viewModel::startAddingBeds,
-        onBedClick = viewModel::startRelabelling,
+        onBedClick = viewModel::startEditingBed,
     )
     state.dialog?.let { dialog ->
         TextEntryDialog(
             title = when (dialog) {
                 is RoomDialog.Rename -> R.string.rename_room
                 is RoomDialog.AddBeds -> R.string.add_beds
-                is RoomDialog.RelabelBed -> R.string.relabel_bed
+                is RoomDialog.EditBed -> R.string.edit_bed
             },
             fieldLabel = when (dialog) {
                 is RoomDialog.Rename -> R.string.room_name
                 is RoomDialog.AddBeds -> R.string.bed_labels
-                is RoomDialog.RelabelBed -> R.string.bed_label
+                is RoomDialog.EditBed -> R.string.bed_label
             },
             entry = dialog.entry,
             onTextChange = viewModel::changeText,
             onSave = viewModel::save,
             onDismiss = viewModel::closeDialog,
             hint = R.string.bed_labels_hint.takeIf { dialog is RoomDialog.AddBeds },
-        )
+        ) {
+            if (dialog is RoomDialog.EditBed) InServiceSwitch(dialog.inService, viewModel::setInService)
+        }
     }
 }
 
@@ -107,7 +115,12 @@ private fun RoomDetailContent(
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.bed_title, bed.label)) },
                         supportingContent = {
-                            Text(state.workersByBed[bed.id]?.name ?: stringResource(R.string.available))
+                            Text(
+                                when {
+                                    !bed.inService -> stringResource(R.string.out_of_service)
+                                    else -> state.workersByBed[bed.id]?.name ?: stringResource(R.string.available)
+                                },
+                            )
                         },
                         modifier = Modifier.clickable { onBedClick(bed) },
                     )
@@ -131,5 +144,16 @@ private fun RoomDetailPreview() {
             ),
             onBack = {}, onRename = {}, onAddBeds = {}, onBedClick = {},
         )
+    }
+}
+
+@Composable
+private fun InServiceSwitch(inService: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).toggleable(inService, role = Role.Switch, onValueChange = onChange),
+    ) {
+        Text(stringResource(R.string.in_service), modifier = Modifier.weight(1f))
+        Switch(checked = inService, onCheckedChange = null)
     }
 }

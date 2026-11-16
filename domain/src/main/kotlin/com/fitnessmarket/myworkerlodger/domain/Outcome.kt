@@ -58,4 +58,7 @@ sealed interface Rejection {
 
     /** A Move must be to a different Bed from the one the Worker is staying in. */
     data object AlreadyInThatBed : Rejection
+
+    /** The Bed is Out of Service, so no Worker can check in to it. */
+    data object BedOutOfService : Rejection
 }

@@ -78,6 +78,20 @@ class MoveTest {
     }
 
     @Test
+    fun `a past-dated Move to a Bed whose earlier Stay overlaps that date is rejected`() {
+        housing.checkIn(bilal.id, bed1B.id, today.minusDays(9)).accepted()
+        housing.checkOut(bilal.id, today.minusDays(3)).accepted()
+
+        assertRejectedAndUnchanged(Rejection.OverlappingStay, housing.move(ahmed.id, bed1B.id, today.minusDays(5)))
+    }
+
+    @Test
+    fun `moving to a Bed or moving a Worker that does not exist is rejected`() {
+        assertRejectedAndUnchanged(Rejection.BedNotFound, housing.move(ahmed.id, BedId("no-such-bed"), today))
+        assertEquals(Outcome.Rejected(Rejection.WorkerNotFound), housing.move(WorkerId("no-such-worker"), bed1B.id, today))
+    }
+
+    @Test
     fun `moving a Worker with no current Stay is rejected`() {
         assertEquals(Outcome.Rejected(Rejection.WorkerNotHoused), housing.move(bilal.id, bed1B.id, today))
     }

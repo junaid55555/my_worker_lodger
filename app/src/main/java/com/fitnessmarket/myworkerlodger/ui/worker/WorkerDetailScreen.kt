@@ -34,6 +34,8 @@ import com.fitnessmarket.myworkerlodger.domain.BedDetails
 import com.fitnessmarket.myworkerlodger.domain.BedId
 import com.fitnessmarket.myworkerlodger.domain.Employer
 import com.fitnessmarket.myworkerlodger.domain.Housing
+import com.fitnessmarket.myworkerlodger.domain.Outcome
+import com.fitnessmarket.myworkerlodger.domain.Stay
 import com.fitnessmarket.myworkerlodger.domain.StayDetails
 import com.fitnessmarket.myworkerlodger.domain.Today
 import com.fitnessmarket.myworkerlodger.domain.Worker
@@ -63,12 +65,27 @@ data class WorkerDetailUiState(
     val dialog: WorkerDialog? = null,
 )
 
+/** What a chosen Bed and date are for: each knows its title and the command it runs. */
+enum class BedChoice(@StringRes val title: Int) {
+    CheckIn(R.string.check_in) {
+        override fun run(housing: Housing, workerId: WorkerId, bedId: BedId, date: LocalDate) =
+            housing.checkIn(workerId, bedId, date)
+    },
+    Move(R.string.move) {
+        override fun run(housing: Housing, workerId: WorkerId, bedId: BedId, date: LocalDate) =
+            housing.move(workerId, bedId, date)
+    },
+    ;
+
+    abstract fun run(housing: Housing, workerId: WorkerId, bedId: BedId, date: LocalDate): Outcome<Stay>
+}
+
 sealed interface WorkerDialog {
     data class Edit(val form: WorkerForm) : WorkerDialog
 
-    /** Choosing a Bed and a date: a Check-in, or a Move when [moving] is true. */
-    data class CheckIn(
-        val moving: Boolean,
+    /** Choosing a Bed and a date, for a Check-in or a Move. */
+    data class ChooseBed(
+        val purpose: BedChoice,
         val beds: List<BedDetails>,
         val bedId: BedId? = null,
         val date: LocalDate,
@@ -92,11 +109,11 @@ class WorkerDetailViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            val (worker, employer, place) = onIo {
+            val (worker, employer, currentStay) = onIo {
                 val worker = housing.worker(workerId)
                 Triple(worker, worker?.let { housing.employer(it.employerId) }, housing.currentStay(workerId))
             }
-            _state.update { it.copy(loaded = true, worker = worker, employer = employer, currentStay = place) }
+            _state.update { it.copy(loaded = true, worker = worker, employer = employer, currentStay = currentStay) }
         }
     }
 
@@ -107,23 +124,23 @@ class WorkerDetailViewModel(
 
     fun changeForm(form: WorkerForm) = open(WorkerDialog.Edit(form))
 
-    fun startCheckIn() = chooseBed(moving = false)
+    fun startCheckIn() = chooseBed(BedChoice.CheckIn)
 
-    fun startMove() = chooseBed(moving = true)
+    fun startMove() = chooseBed(BedChoice.Move)
 
-    private fun chooseBed(moving: Boolean) {
+    private fun chooseBed(purpose: BedChoice) {
         viewModelScope.launch {
             val beds = onIo { housing.bedsAvailableFor(workerId) }
-            open(WorkerDialog.CheckIn(moving = moving, beds = beds, date = todayDate))
+            open(WorkerDialog.ChooseBed(purpose = purpose, beds = beds, date = todayDate))
         }
     }
 
     fun startCheckOut() = open(WorkerDialog.CheckOut(date = todayDate))
 
-    fun selectBed(bedId: BedId) = updateDialog<WorkerDialog.CheckIn> { it.copy(bedId = bedId, error = null) }
+    fun selectBed(bedId: BedId) = updateDialog<WorkerDialog.ChooseBed> { it.copy(bedId = bedId, error = null) }
 
     fun changeDate(date: LocalDate) {
-        updateDialog<WorkerDialog.CheckIn> { it.copy(date = date, error = null) }
+        updateDialog<WorkerDialog.ChooseBed> { it.copy(date = date, error = null) }
         updateDialog<WorkerDialog.CheckOut> { it.copy(date = date, error = null) }
     }
 
@@ -135,11 +152,11 @@ class WorkerDetailViewModel(
                 onError = { error -> open(WorkerDialog.Edit(dialog.form.copy(error = error))) },
                 onSaved = ::closeAndRefresh,
             )
-            is WorkerDialog.CheckIn -> {
+            is WorkerDialog.ChooseBed -> {
                 val bedId = dialog.bedId ?: return open(dialog.copy(error = R.string.choose_a_bed))
                 runCommand(
                     command = {
-                        if (dialog.moving) housing.move(workerId, bedId, dialog.date) else housing.checkIn(workerId, bedId, dialog.date)
+                        dialog.purpose.run(housing, workerId, bedId, dialog.date)
                     },
                     onRejected = { open(dialog.copy(error = it.messageRes())) },
                 ) { closeAndRefresh() }
@@ -205,8 +222,8 @@ fun WorkerDetailScreen(
     }
     when (val dialog = state.dialog) {
         is WorkerDialog.Edit -> WorkerFormDialog(dialog.form, viewModel::changeForm, viewModel::save, viewModel::closeDialog)
-        is WorkerDialog.CheckIn -> CheckInDialog(
-            title = if (dialog.moving) R.string.move else R.string.check_in,
+        is WorkerDialog.ChooseBed -> CheckInDialog(
+            title = dialog.purpose.title,
             beds = dialog.beds,
             selected = dialog.bedId,
             date = dialog.date,

@@ -36,6 +36,14 @@ _Avoid_: Unit, dorm
 A single sleeping place within a Room, and the unit a Worker is assigned to.
 _Avoid_: Bunk, berth, slot, space
 
+**Label**:
+The short text that identifies a Bed within its Room, such as "3B".
+_Avoid_: Bed number, bed name, tag
+
+**Sex**:
+Male or female: the designation of a Room, and the matching attribute of a Worker.
+_Avoid_: Gender
+
 **Out of Service**:
 The state of a Bed that cannot be used, for example because it is broken or under repair; no Worker can check in to it.
 _Avoid_: Disabled, blocked, closed

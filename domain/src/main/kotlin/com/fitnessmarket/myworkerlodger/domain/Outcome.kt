@@ -11,6 +11,15 @@ sealed interface Rejection {
     /** A name was empty or only whitespace. */
     data object BlankName : Rejection
 
+    /** A Bed label was empty or only whitespace. */
+    data object BlankLabel : Rejection
+
     /** The Property the command refers to doesn't exist (for example, it was deleted). */
     data object PropertyNotFound : Rejection
+
+    /** The Room the command refers to doesn't exist. */
+    data object RoomNotFound : Rejection
+
+    /** The Bed the command refers to doesn't exist. */
+    data object BedNotFound : Rejection
 }

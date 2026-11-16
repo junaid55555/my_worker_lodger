@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.fitnessmarket.myworkerlodger.ui.properties.PropertiesScreen
+import com.fitnessmarket.myworkerlodger.ui.navigation.WorkerLodgerNavHost
 import com.fitnessmarket.myworkerlodger.ui.theme.MyWorkerLodgerTheme
 
 class MainActivity : ComponentActivity() {
@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyWorkerLodgerTheme {
-                PropertiesScreen()
+                WorkerLodgerNavHost()
             }
         }
     }

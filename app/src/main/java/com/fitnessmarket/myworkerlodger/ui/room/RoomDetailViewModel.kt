@@ -13,6 +13,7 @@ import com.fitnessmarket.myworkerlodger.domain.Housing
 import com.fitnessmarket.myworkerlodger.domain.Occupancy
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
+import com.fitnessmarket.myworkerlodger.domain.Sex
 import com.fitnessmarket.myworkerlodger.domain.Worker
 import com.fitnessmarket.myworkerlodger.ui.common.Deletion
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
@@ -41,7 +42,8 @@ sealed interface RoomDialog {
     val entry: TextEntry
     fun withEntry(entry: TextEntry): RoomDialog
 
-    data class Rename(override val entry: TextEntry) : RoomDialog {
+    /** Editing the Room's name and sex, saved together. */
+    data class Edit(override val entry: TextEntry, val sex: Sex) : RoomDialog {
         override fun withEntry(entry: TextEntry) = copy(entry = entry)
     }
 
@@ -51,7 +53,7 @@ sealed interface RoomDialog {
     }
 }
 
-/** Shows one Room and its Beds, and lets the Accommodation Manager rename it and add Beds. */
+/** Shows one Room and its Beds, and lets the Accommodation Manager edit it and add Beds. */
 class RoomDetailViewModel(private val housing: Housing, private val roomId: RoomId) : ViewModel() {
 
     private val _state = MutableStateFlow(RoomDetailUiState())
@@ -75,10 +77,13 @@ class RoomDetailViewModel(private val housing: Housing, private val roomId: Room
         }
     }
 
-    fun startRenaming() {
-        val name = _state.value.room?.name ?: return
-        open(RoomDialog.Rename(TextEntry(name)))
+    fun startEditing() {
+        val room = _state.value.room ?: return
+        open(RoomDialog.Edit(TextEntry(room.name), room.sex))
     }
+
+    fun chooseSex(sex: Sex) =
+        _state.update { state -> state.copy(dialog = (state.dialog as? RoomDialog.Edit)?.copy(sex = sex) ?: state.dialog) }
 
     fun startAddingBeds() = open(RoomDialog.AddBeds(TextEntry()))
 
@@ -92,7 +97,7 @@ class RoomDetailViewModel(private val housing: Housing, private val roomId: Room
         runCommand(
             command = {
                 when (dialog) {
-                    is RoomDialog.Rename -> housing.renameRoom(roomId, dialog.entry.text)
+                    is RoomDialog.Edit -> housing.editRoom(roomId, dialog.entry.text, dialog.sex)
                     is RoomDialog.AddBeds -> housing.addBeds(roomId, dialog.entry.labels())
                 }
             },

@@ -28,6 +28,7 @@ import com.fitnessmarket.myworkerlodger.domain.Sex
 import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
 import com.fitnessmarket.myworkerlodger.ui.common.DeletionDialog
 import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
+import com.fitnessmarket.myworkerlodger.ui.common.SexChoice
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntryDialog
 import com.fitnessmarket.myworkerlodger.ui.labelRes
@@ -46,7 +47,7 @@ fun RoomDetailScreen(
     RoomDetailContent(
         state = state,
         onBack = onBack,
-        onRename = viewModel::startRenaming,
+        onEdit = viewModel::startEditing,
         onDelete = viewModel.deletion::start,
         onAddBeds = viewModel::startAddingBeds,
         onBedClick = { onOpenBed(it.id) },
@@ -54,11 +55,11 @@ fun RoomDetailScreen(
     state.dialog?.let { dialog ->
         TextEntryDialog(
             title = when (dialog) {
-                is RoomDialog.Rename -> R.string.rename_room
+                is RoomDialog.Edit -> R.string.edit_room
                 is RoomDialog.AddBeds -> R.string.add_beds
             },
             fieldLabel = when (dialog) {
-                is RoomDialog.Rename -> R.string.room_name
+                is RoomDialog.Edit -> R.string.room_name
                 is RoomDialog.AddBeds -> R.string.bed_labels
             },
             entry = dialog.entry,
@@ -66,7 +67,9 @@ fun RoomDetailScreen(
             onSave = viewModel::save,
             onDismiss = viewModel::closeDialog,
             hint = R.string.bed_labels_hint.takeIf { dialog is RoomDialog.AddBeds },
-        )
+        ) {
+            if (dialog is RoomDialog.Edit) SexChoice(selected = dialog.sex, onSelect = viewModel::chooseSex)
+        }
     }
 }
 
@@ -74,7 +77,7 @@ fun RoomDetailScreen(
 private fun RoomDetailContent(
     state: RoomDetailUiState,
     onBack: () -> Unit,
-    onRename: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     onAddBeds: () -> Unit,
     onBedClick: (Bed) -> Unit,
@@ -88,7 +91,7 @@ private fun RoomDetailContent(
                 subtitle = room?.let { stringResource(it.sex.labelRes()) },
                 onBack = onBack,
             ) {
-                if (room != null) TextButton(onClick = onRename) { Text(stringResource(R.string.rename)) }
+                if (room != null) TextButton(onClick = onEdit) { Text(stringResource(R.string.edit)) }
                 if (room != null) TextButton(onClick = onDelete) { Text(stringResource(R.string.delete)) }
             }
         },
@@ -138,7 +141,7 @@ private fun RoomDetailPreview() {
                 room = room,
                 beds = listOf("1A", "1B", "2A", "2B").map { Bed(BedId(it), room.id, it) },
             ),
-            onBack = {}, onRename = {}, onDelete = {}, onAddBeds = {}, onBedClick = {},
+            onBack = {}, onEdit = {}, onDelete = {}, onAddBeds = {}, onBedClick = {},
         )
     }
 }

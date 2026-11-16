@@ -31,6 +31,7 @@ fun Rejection.messageRes(): Int = when (this) {
     Rejection.CheckOutRequired -> R.string.rejection_check_out_required
     Rejection.HasStays -> R.string.rejection_has_stays
     Rejection.EmployerHasWorkers -> R.string.rejection_employer_has_workers
+    Rejection.WouldMixRoom -> R.string.rejection_would_mix_room
 }
 
 /** How a [Sex] is shown. */

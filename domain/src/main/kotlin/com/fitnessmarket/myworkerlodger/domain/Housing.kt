@@ -46,10 +46,24 @@ class Housing(
 
     fun renameRoom(id: RoomId, name: String): Outcome<Room> {
         val room = store.room(id) ?: return Outcome.Rejected(Rejection.RoomNotFound)
+        return editRoom(id, name, room.sex)
+    }
+
+    /**
+     * Changes a Room's name and sex together: both change or neither does. The sex can't change while
+     * a Worker of the other sex has a current Stay in the Room; past Stays don't matter.
+     */
+    fun editRoom(id: RoomId, name: String, sex: Sex): Outcome<Room> {
+        val room = store.room(id) ?: return Outcome.Rejected(Rejection.RoomNotFound)
         if (name.isBlank()) return Outcome.Rejected(Rejection.BlankName)
-        val renamed = room.copy(name = name.trim())
-        store.saveRoom(renamed)
-        return Outcome.Accepted(renamed)
+        if (sex != room.sex) {
+            val bedIds = store.beds(id).map { it.id }.toSet()
+            val housedHere = store.stays().filter { it.isCurrent && it.bedId in bedIds }.mapNotNull { store.worker(it.workerId) }
+            if (housedHere.any { it.sex != sex }) return Outcome.Rejected(Rejection.WouldMixRoom)
+        }
+        val edited = room.copy(name = name.trim(), sex = sex)
+        store.saveRoom(edited)
+        return Outcome.Accepted(edited)
     }
 
     fun addBeds(roomId: RoomId, labels: List<String>): Outcome<List<Bed>> {
@@ -129,10 +143,22 @@ class Housing(
         return Outcome.Accepted(worker)
     }
 
+    /** Edits a Worker's Staff Number and name, keeping their sex. */
     fun editWorker(id: WorkerId, staffNumber: String, name: String): Outcome<Worker> {
         val worker = store.worker(id) ?: return Outcome.Rejected(Rejection.WorkerNotFound)
+        return editWorker(id, staffNumber, name, worker.sex)
+    }
+
+    /**
+     * Edits a Worker's Staff Number, name and sex together: all change or none do. The sex can't change
+     * while the Worker has a current Stay in a Room of the other sex.
+     */
+    fun editWorker(id: WorkerId, staffNumber: String, name: String, sex: Sex): Outcome<Worker> {
+        val worker = store.worker(id) ?: return Outcome.Rejected(Rejection.WorkerNotFound)
         workerDetailsProblem(worker.employerId, staffNumber, name, except = id)?.let { return Outcome.Rejected(it) }
-        val edited = worker.copy(staffNumber = staffNumber.trim(), name = name.trim())
+        val currentRoom = currentStay(id)?.room
+        if (currentRoom != null && currentRoom.sex != sex) return Outcome.Rejected(Rejection.WouldMixRoom)
+        val edited = worker.copy(staffNumber = staffNumber.trim(), name = name.trim(), sex = sex)
         store.saveWorker(edited)
         return Outcome.Accepted(edited)
     }
@@ -287,23 +313,26 @@ class Housing(
     /** Deletes a Worker, only if they have never had a Stay. */
     fun deleteWorker(id: WorkerId): Outcome<Unit> {
         if (store.worker(id) == null) return Outcome.Rejected(Rejection.WorkerNotFound)
-        if (store.stays().any { it.workerId == id }) return Outcome.Rejected(Rejection.HasStays)
-        store.remove(Removal(workerIds = setOf(id)))
-        return Outcome.Accepted(Unit)
+        val problem = Rejection.HasStays.takeIf { store.stays().any { it.workerId == id } }
+        return removeUnless(problem, Removal(workerIds = setOf(id)))
     }
 
     /** Deletes an Employer, only if it has no Workers. */
     fun deleteEmployer(id: EmployerId): Outcome<Unit> {
         if (store.employer(id) == null) return Outcome.Rejected(Rejection.EmployerNotFound)
-        if (store.workers().any { it.employerId == id }) return Outcome.Rejected(Rejection.EmployerHasWorkers)
-        store.remove(Removal(employerIds = setOf(id)))
-        return Outcome.Accepted(Unit)
+        val problem = Rejection.EmployerHasWorkers.takeIf { store.workers().any { it.employerId == id } }
+        return removeUnless(problem, Removal(employerIds = setOf(id)))
     }
 
     /** History is never rewritten: nothing is removed if any of [beds] has ever had a Stay. */
     private fun removeUnlessStayedIn(beds: List<Bed>, removal: Removal): Outcome<Unit> {
         val bedIds = beds.ids()
-        if (store.stays().any { it.bedId in bedIds }) return Outcome.Rejected(Rejection.HasStays)
+        return removeUnless(Rejection.HasStays.takeIf { store.stays().any { it.bedId in bedIds } }, removal)
+    }
+
+    /** Removes everything in [removal], unless there's a [problem]. */
+    private fun removeUnless(problem: Rejection?, removal: Removal): Outcome<Unit> {
+        if (problem != null) return Outcome.Rejected(problem)
         store.remove(removal)
         return Outcome.Accepted(Unit)
     }
@@ -331,7 +360,7 @@ class Housing(
 
     private fun occupancyOf(beds: List<Bed>, stays: List<Stay>): Occupancy {
         val inService = beds.filter { it.inService }
-        return Occupancy(inServiceBeds = inService.size, bedsWithCurrentStay = inService.count { !isAvailable(it, stays) })
+        return Occupancy(inServiceBeds = inService.size, bedsWithCurrentStay = inService.count { hasCurrentStay(it.id, stays) })
     }
 
     /** The Bed with its Room and Property, or null if there's no such Bed. */

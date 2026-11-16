@@ -15,7 +15,7 @@
 
     <string name="no_rooms_yet">No Rooms yet. Add the first Room in this Property.</string>
     <string name="add_room">Add Room</string>
-    <string name="rename_room">Rename Room</string>
+    <string name="edit_room">Edit Room</string>
     <string name="room_name">Room name</string>
     <string name="room_name_hint">You can include the floor or block, for example B-204.</string>
     <string name="sex_male">Male</string>
@@ -95,9 +95,10 @@
     </plurals>
     <string name="no_in_service_beds">No in-service Beds</string>
     <string name="room_summary">%1$s · %2$s</string>
+    <string name="rejection_would_mix_room">That would put a Worker in a Room for the other sex. Move or check out the Workers staying here first.</string>
     <string name="delete">Delete</string>
-    <string name="rejection_has_stays">This can\'t be deleted because it has Stays (past or current). Deleting it would change the history of where Workers lived.</string>
-    <string name="rejection_employer_has_workers">This Employer still has Workers, so it can\'t be deleted.</string>
+    <string name="rejection_has_stays">This can\'t be deleted because it has Stays (past or current). Deleting it would change the history of where Workers lived. To stop using a Bed, mark it Out of Service instead.</string>
+    <string name="rejection_employer_has_workers">This Employer still has Workers, so it can\'t be deleted. Delete those Workers first, if they have never stayed in a Bed.</string>
     <string name="delete_property">Delete Property?</string>
     <string name="delete_property_message">This also deletes all its Rooms and Beds. It\'s only allowed if no one has ever stayed in them.</string>
     <string name="delete_room">Delete Room?</string>

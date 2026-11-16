@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Agent skills: per-machine junctions into .agents/skills (recreate with the skills installer)
+/.claude/skills/
+
+# Android Studio selected device (machine-specific)
+/.idea/deploymentTargetSelector.xml

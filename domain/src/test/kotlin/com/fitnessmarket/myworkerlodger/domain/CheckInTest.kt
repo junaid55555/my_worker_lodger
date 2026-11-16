@@ -20,12 +20,12 @@ class CheckInTest {
     fun `a checked-in Worker is in the Bed, Room and Property they checked in to`() {
         housing.checkIn(ahmed.id, bed1A.id, today)
 
-        val place = housing.currentPlace(ahmed.id)
+        val place = housing.currentStay(ahmed.id)
         assertEquals(
             listOf(bed1A.label, maleRoom.name, property.name, today),
             listOf(place?.bed?.label, place?.room?.name, place?.property?.name, place?.stay?.checkIn),
         )
-        assertEquals(mapOf(bed1A.id to ahmed), housing.occupants(maleRoom.id))
+        assertEquals(mapOf(bed1A.id to ahmed), housing.workersByBed(maleRoom.id))
     }
 
     private val bed1B = housing.addBeds(maleRoom.id, listOf("1B")).accepted().single()
@@ -35,7 +35,7 @@ class CheckInTest {
     fun `a Check-in can be recorded on a past date`() {
         housing.checkIn(ahmed.id, bed1A.id, today.minusDays(3))
 
-        assertEquals(today.minusDays(3), housing.currentPlace(ahmed.id)?.stay?.checkIn)
+        assertEquals(today.minusDays(3), housing.currentStay(ahmed.id)?.stay?.checkIn)
     }
 
     @Test
@@ -43,7 +43,7 @@ class CheckInTest {
         val outcome = housing.checkIn(ahmed.id, bed1A.id, today.plusDays(1))
 
         assertEquals(Outcome.Rejected(Rejection.FutureDate), outcome)
-        assertEquals(null, housing.currentPlace(ahmed.id))
+        assertEquals(null, housing.currentStay(ahmed.id))
     }
 
     @Test
@@ -53,7 +53,7 @@ class CheckInTest {
         val outcome = housing.checkIn(bilal.id, bed1A.id, today)
 
         assertEquals(Outcome.Rejected(Rejection.BedOccupied), outcome)
-        assertEquals(mapOf(bed1A.id to ahmed), housing.occupants(maleRoom.id))
+        assertEquals(mapOf(bed1A.id to ahmed), housing.workersByBed(maleRoom.id))
     }
 
     @Test
@@ -63,7 +63,7 @@ class CheckInTest {
         val outcome = housing.checkIn(ahmed.id, bed1B.id, today)
 
         assertEquals(Outcome.Rejected(Rejection.WorkerAlreadyHoused), outcome)
-        assertEquals(bed1A.id, housing.currentPlace(ahmed.id)?.bed?.id)
+        assertEquals(bed1A.id, housing.currentStay(ahmed.id)?.bed?.id)
     }
 
     @Test
@@ -73,7 +73,7 @@ class CheckInTest {
         val outcome = housing.checkIn(priya.id, bed1A.id, today)
 
         assertEquals(Outcome.Rejected(Rejection.SexMismatch), outcome)
-        assertEquals(null, housing.currentPlace(priya.id))
+        assertEquals(null, housing.currentStay(priya.id))
     }
 
     @Test
@@ -84,7 +84,7 @@ class CheckInTest {
         housing.checkIn(ahmed.id, bed1A.id, today)
         housing.checkIn(ravi.id, bed1B.id, today)
 
-        assertEquals(mapOf(bed1A.id to ahmed, bed1B.id to ravi), housing.occupants(maleRoom.id))
+        assertEquals(mapOf(bed1A.id to ahmed, bed1B.id to ravi), housing.workersByBed(maleRoom.id))
     }
 
     @Test
@@ -108,13 +108,23 @@ class CheckInTest {
     }
 
     @Test
+    fun `a Worker can be checked in to another Bed on the date their last Stay ended`() {
+        housing.checkIn(ahmed.id, bed1A.id, today.minusDays(10))
+        housing.checkOut(ahmed.id, today.minusDays(5))
+
+        housing.checkIn(ahmed.id, bed1B.id, today.minusDays(5)).accepted()
+
+        assertEquals(bed1B.id, housing.currentStay(ahmed.id)?.bed?.id)
+    }
+
+    @Test
     fun `a Bed can be checked in to on the date its last Stay ended`() {
         housing.checkIn(bilal.id, bed1A.id, today.minusDays(10))
         housing.checkOut(bilal.id, today.minusDays(5))
 
         housing.checkIn(ahmed.id, bed1A.id, today.minusDays(5)).accepted()
 
-        assertEquals(mapOf(bed1A.id to ahmed), housing.occupants(maleRoom.id))
+        assertEquals(mapOf(bed1A.id to ahmed), housing.workersByBed(maleRoom.id))
     }
 
     @Test

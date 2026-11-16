@@ -55,4 +55,7 @@ sealed interface Rejection {
 
     /** The dates would overlap another Stay of the same Worker or in the same Bed. */
     data object OverlappingStay : Rejection
+
+    /** A Move must be to a different Bed from the one the Worker is staying in. */
+    data object AlreadyInThatBed : Rejection
 }

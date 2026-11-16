@@ -29,7 +29,7 @@ data class RoomDetailUiState(
     val room: Room? = null,
     val beds: List<Bed> = emptyList(),
     /** The Worker in each occupied Bed. */
-    val occupants: Map<BedId, Worker> = emptyMap(),
+    val workersByBed: Map<BedId, Worker> = emptyMap(),
     val dialog: RoomDialog? = null,
 )
 
@@ -59,8 +59,8 @@ class RoomDetailViewModel(private val housing: Housing, private val roomId: Room
 
     fun refresh() {
         viewModelScope.launch {
-            val (room, beds, occupants) = onIo { Triple(housing.room(roomId), housing.beds(roomId), housing.occupants(roomId)) }
-            _state.update { it.copy(loaded = true, room = room, beds = beds, occupants = occupants) }
+            val (room, beds, workersByBed) = onIo { Triple(housing.room(roomId), housing.beds(roomId), housing.workersByBed(roomId)) }
+            _state.update { it.copy(loaded = true, room = room, beds = beds, workersByBed = workersByBed) }
         }
     }
 

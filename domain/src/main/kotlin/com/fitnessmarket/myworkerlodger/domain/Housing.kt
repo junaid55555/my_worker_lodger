@@ -111,20 +111,45 @@ class Housing(
     fun worker(id: WorkerId): Worker? = store.worker(id)
 
     fun checkIn(workerId: WorkerId, bedId: BedId, date: LocalDate): Outcome<Stay> {
-        val worker = store.worker(workerId) ?: return Outcome.Rejected(Rejection.WorkerNotFound)
-        val bed = store.bed(bedId) ?: return Outcome.Rejected(Rejection.BedNotFound)
-        val room = store.room(bed.roomId) ?: return Outcome.Rejected(Rejection.RoomNotFound)
-        if (date.isAfter(today.date())) return Outcome.Rejected(Rejection.FutureDate)
-        val stays = store.stays()
-        if (stays.any { it.workerId == workerId && it.isCurrent }) return Outcome.Rejected(Rejection.WorkerAlreadyHoused)
-        if (stays.any { it.bedId == bedId && it.isCurrent }) return Outcome.Rejected(Rejection.BedOccupied)
-        if (worker.sex != room.sex) return Outcome.Rejected(Rejection.SexMismatch)
-        if (stays.any { (it.workerId == workerId || it.bedId == bedId) && it.overlaps(date, until = null) }) {
-            return Outcome.Rejected(Rejection.OverlappingStay)
-        }
+        checkInProblem(workerId, bedId, date, store.stays())?.let { return Outcome.Rejected(it) }
         val stay = Stay(StayId(UUID.randomUUID().toString()), workerId, bedId, date)
-        store.saveStay(stay)
+        store.saveStays(listOf(stay))
         return Outcome.Accepted(stay)
+    }
+
+    /**
+     * Moves a housed Worker to another Bed on [date]: their current Stay ends with a Check-out and a
+     * new Stay begins with a Check-in, both on that date. All or nothing: if the new Bed breaks any
+     * Check-in rule, the current Stay is left as it was.
+     */
+    fun move(workerId: WorkerId, bedId: BedId, date: LocalDate): Outcome<Stay> {
+        if (store.worker(workerId) == null) return Outcome.Rejected(Rejection.WorkerNotFound)
+        val current = currentStayOf(workerId) ?: return Outcome.Rejected(Rejection.WorkerNotHoused)
+        if (current.bedId == bedId) return Outcome.Rejected(Rejection.AlreadyInThatBed)
+        if (date.isAfter(today.date())) return Outcome.Rejected(Rejection.FutureDate)
+        if (date.isBefore(current.checkIn)) return Outcome.Rejected(Rejection.CheckOutBeforeCheckIn)
+        val ended = current.copy(checkOut = date)
+        val staysAfterCheckOut = store.stays().map { if (it.id == current.id) ended else it }
+        checkInProblem(workerId, bedId, date, staysAfterCheckOut)?.let { return Outcome.Rejected(it) }
+        val started = Stay(StayId(UUID.randomUUID().toString()), workerId, bedId, date)
+        store.saveStays(listOf(ended, started))
+        return Outcome.Accepted(started)
+    }
+
+    /** Which Check-in rule, if any, stops [workerId] checking in to [bedId] on [date], given [stays]. */
+    private fun checkInProblem(workerId: WorkerId, bedId: BedId, date: LocalDate, stays: List<Stay>): Rejection? {
+        val worker = store.worker(workerId) ?: return Rejection.WorkerNotFound
+        val bed = store.bed(bedId) ?: return Rejection.BedNotFound
+        val room = store.room(bed.roomId) ?: return Rejection.RoomNotFound
+        return when {
+            date.isAfter(today.date()) -> Rejection.FutureDate
+            stays.any { it.workerId == workerId && it.isCurrent } -> Rejection.WorkerAlreadyHoused
+            stays.any { it.bedId == bedId && it.isCurrent } -> Rejection.BedOccupied
+            worker.sex != room.sex -> Rejection.SexMismatch
+            stays.any { (it.workerId == workerId || it.bedId == bedId) && it.overlaps(date, until = null) } ->
+                Rejection.OverlappingStay
+            else -> null
+        }
     }
 
     fun checkOut(workerId: WorkerId, date: LocalDate): Outcome<Stay> {
@@ -133,7 +158,7 @@ class Housing(
         if (date.isAfter(today.date())) return Outcome.Rejected(Rejection.FutureDate)
         if (date.isBefore(stay.checkIn)) return Outcome.Rejected(Rejection.CheckOutBeforeCheckIn)
         val ended = stay.copy(checkOut = date)
-        store.saveStay(ended)
+        store.saveStays(listOf(ended))
         return Outcome.Accepted(ended)
     }
 
@@ -142,7 +167,7 @@ class Housing(
         store.stays().filter { it.workerId == workerId }.sortedByDescending { it.checkIn }.mapNotNull(::details)
 
     /** Where the Worker is living now, or null if they have no current Stay. */
-    fun currentPlace(workerId: WorkerId): StayDetails? = currentStayOf(workerId)?.let(::details)
+    fun currentStay(workerId: WorkerId): StayDetails? = currentStayOf(workerId)?.let(::details)
 
     private fun currentStayOf(workerId: WorkerId): Stay? = store.stays().firstOrNull { it.workerId == workerId && it.isCurrent }
 
@@ -161,7 +186,7 @@ class Housing(
     }
 
     /** The Worker in each occupied Bed of the Room. */
-    fun occupants(roomId: RoomId): Map<BedId, Worker> {
+    fun workersByBed(roomId: RoomId): Map<BedId, Worker> {
         val bedIds = store.beds(roomId).map { it.id }.toSet()
         return store.stays()
             .filter { it.isCurrent && it.bedId in bedIds }
@@ -173,7 +198,7 @@ class Housing(
         val bed = store.bed(stay.bedId) ?: return null
         val room = store.room(bed.roomId) ?: return null
         val property = store.property(room.propertyId) ?: return null
-        return StayDetails(stay, bed, room, property)
+        return StayDetails(stay, BedDetails(bed, room, property))
     }
 
     /** Staff Numbers are compared ignoring case and surrounding spaces, so "E-1042" and " e-1042" clash. */

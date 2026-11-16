@@ -56,7 +56,7 @@ class InMemoryHousingStore : HousingStore {
 
     override fun stays(): List<Stay> = stays.values.toList()
 
-    override fun saveStay(stay: Stay) {
-        stays[stay.id] = stay
+    override fun saveStays(stays: List<Stay>) {
+        stays.forEach { this.stays[it.id] = it }
     }
 }

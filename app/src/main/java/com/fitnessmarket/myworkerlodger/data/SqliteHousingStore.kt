@@ -79,23 +79,16 @@ class SqliteHousingStore(context: Context) : HousingStore {
 
     override fun beds(roomId: RoomId): List<Bed> = query("bed", "room_id = ?", roomId.value) { it.toBed() }
 
-    override fun saveBeds(beds: List<Bed>) {
-        val db = helper.writableDatabase
-        db.beginTransaction()
-        try {
-            beds.forEach { bed ->
-                replace(
-                    "bed",
-                    ContentValues().apply {
-                        put("id", bed.id.value)
-                        put("room_id", bed.roomId.value)
-                        put("label", bed.label)
-                    },
-                )
-            }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
+    override fun saveBeds(beds: List<Bed>) = inTransaction {
+        beds.forEach { bed ->
+            replace(
+                "bed",
+                ContentValues().apply {
+                    put("id", bed.id.value)
+                    put("room_id", bed.roomId.value)
+                    put("label", bed.label)
+                },
+            )
         }
     }
 
@@ -129,20 +122,36 @@ class SqliteHousingStore(context: Context) : HousingStore {
 
     override fun stays(): List<Stay> = query("stay") { it.toStay() }
 
-    override fun saveStay(stay: Stay) = replace(
-        "stay",
-        ContentValues().apply {
-            put("id", stay.id.value)
-            put("worker_id", stay.workerId.value)
-            put("bed_id", stay.bedId.value)
-            put("check_in", stay.checkIn.toString())
-            put("check_out", stay.checkOut?.toString())
-        },
-    )
+    override fun saveStays(stays: List<Stay>) = inTransaction {
+        stays.forEach { stay ->
+            replace(
+                "stay",
+                ContentValues().apply {
+                    put("id", stay.id.value)
+                    put("worker_id", stay.workerId.value)
+                    put("bed_id", stay.bedId.value)
+                    put("check_in", stay.checkIn.toString())
+                    put("check_out", stay.checkOut?.toString())
+                },
+            )
+        }
+    }
 
     private fun <T> query(table: String, where: String? = null, vararg args: String, read: (Cursor) -> T): List<T> =
         helper.readableDatabase.query(table, null, where, args.takeIf { it.isNotEmpty() }, null, null, null)
             .use { cursor -> buildList { while (cursor.moveToNext()) add(read(cursor)) } }
+
+    /** Runs [block] so that all its writes are saved together or not at all. */
+    private fun inTransaction(block: () -> Unit) {
+        val db = helper.writableDatabase
+        db.beginTransaction()
+        try {
+            block()
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
 
     private fun replace(table: String, values: ContentValues) {
         helper.writableDatabase.insertWithOnConflict(table, null, values, SQLiteDatabase.CONFLICT_REPLACE)

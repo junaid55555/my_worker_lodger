@@ -22,8 +22,8 @@ class CheckOutTest {
 
         housing.checkOut(ahmed.id, today)
 
-        assertEquals(null, housing.currentPlace(ahmed.id))
-        assertEquals(emptyMap<BedId, Worker>(), housing.occupants(room.id))
+        assertEquals(null, housing.currentStay(ahmed.id))
+        assertEquals(emptyMap<BedId, Worker>(), housing.workersByBed(room.id))
         assertEquals(
             listOf(today.minusDays(10) to today),
             housing.staysOf(ahmed.id).map { it.stay.checkIn to it.stay.checkOut },
@@ -46,7 +46,7 @@ class CheckOutTest {
         val outcome = housing.checkOut(ahmed.id, today.plusDays(1))
 
         assertEquals(Outcome.Rejected(Rejection.FutureDate), outcome)
-        assertEquals(bed.id, housing.currentPlace(ahmed.id)?.bed?.id)
+        assertEquals(bed.id, housing.currentStay(ahmed.id)?.bed?.id)
     }
 
     @Test

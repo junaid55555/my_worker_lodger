@@ -15,8 +15,11 @@ import com.fitnessmarket.myworkerlodger.domain.PropertyId
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Sex
+import com.fitnessmarket.myworkerlodger.domain.Stay
+import com.fitnessmarket.myworkerlodger.domain.StayId
 import com.fitnessmarket.myworkerlodger.domain.Worker
 import com.fitnessmarket.myworkerlodger.domain.WorkerId
+import java.time.LocalDate
 
 /** The on-device [HousingStore] (ADR-0001): one SQLite database file, included in Android backup. */
 class SqliteHousingStore(context: Context) : HousingStore {
@@ -28,6 +31,7 @@ class SqliteHousingStore(context: Context) : HousingStore {
             db.execSQL(CREATE_BED)
             db.execSQL(CREATE_EMPLOYER)
             db.execSQL(CREATE_WORKER)
+            db.execSQL(CREATE_STAY)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -39,6 +43,7 @@ class SqliteHousingStore(context: Context) : HousingStore {
                 db.execSQL(CREATE_EMPLOYER)
                 db.execSQL(CREATE_WORKER)
             }
+            if (oldVersion < 4) db.execSQL(CREATE_STAY)
         }
     }
 
@@ -122,6 +127,19 @@ class SqliteHousingStore(context: Context) : HousingStore {
         },
     )
 
+    override fun stays(): List<Stay> = query("stay") { it.toStay() }
+
+    override fun saveStay(stay: Stay) = replace(
+        "stay",
+        ContentValues().apply {
+            put("id", stay.id.value)
+            put("worker_id", stay.workerId.value)
+            put("bed_id", stay.bedId.value)
+            put("check_in", stay.checkIn.toString())
+            put("check_out", stay.checkOut?.toString())
+        },
+    )
+
     private fun <T> query(table: String, where: String? = null, vararg args: String, read: (Cursor) -> T): List<T> =
         helper.readableDatabase.query(table, null, where, args.takeIf { it.isNotEmpty() }, null, null, null)
             .use { cursor -> buildList { while (cursor.moveToNext()) add(read(cursor)) } }
@@ -139,6 +157,14 @@ class SqliteHousingStore(context: Context) : HousingStore {
 
     private fun Cursor.toBed() = Bed(BedId(text("id")), RoomId(text("room_id")), text("label"))
 
+    private fun Cursor.toStay() = Stay(
+        StayId(text("id")),
+        WorkerId(text("worker_id")),
+        BedId(text("bed_id")),
+        LocalDate.parse(text("check_in")),
+        getString(getColumnIndexOrThrow("check_out"))?.let(LocalDate::parse),
+    )
+
     private fun Cursor.toEmployer() = Employer(EmployerId(text("id")), text("name"))
 
     private fun Cursor.toWorker() = Worker(
@@ -151,7 +177,7 @@ class SqliteHousingStore(context: Context) : HousingStore {
 
     companion object {
         const val DATABASE_NAME = "housing.db"
-        private const val DATABASE_VERSION = 3
+        private const val DATABASE_VERSION = 4
 
         private const val CREATE_PROPERTY =
             "CREATE TABLE property (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL)"
@@ -167,5 +193,9 @@ class SqliteHousingStore(context: Context) : HousingStore {
             "CREATE TABLE worker (id TEXT PRIMARY KEY NOT NULL, " +
                 "employer_id TEXT NOT NULL REFERENCES employer(id), staff_number TEXT NOT NULL, " +
                 "name TEXT NOT NULL, sex TEXT NOT NULL)"
+        private const val CREATE_STAY =
+            "CREATE TABLE stay (id TEXT PRIMARY KEY NOT NULL, " +
+                "worker_id TEXT NOT NULL REFERENCES worker(id), bed_id TEXT NOT NULL REFERENCES bed(id), " +
+                "check_in TEXT NOT NULL, check_out TEXT)"
     }
 }

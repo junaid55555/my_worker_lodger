@@ -64,7 +64,7 @@ fun ViewModel.saveWorkerForm(
     housing: Housing,
     form: WorkerForm,
     onError: (Int) -> Unit,
-    onSaved: (Worker) -> Unit,
+    onSaved: () -> Unit,
 ) {
     val employerId = form.employerId
     if (form.workerId == null && employerId == null) return onError(R.string.choose_an_employer)
@@ -77,7 +77,7 @@ fun ViewModel.saveWorkerForm(
             }
         },
         onRejected = { onError(it.messageRes()) },
-        onAccepted = onSaved,
+        onAccepted = { onSaved() },
     )
 }
 

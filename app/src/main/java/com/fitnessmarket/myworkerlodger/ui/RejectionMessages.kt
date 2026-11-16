@@ -17,6 +17,13 @@ fun Rejection.messageRes(): Int = when (this) {
     Rejection.BedNotFound -> R.string.rejection_bed_not_found
     Rejection.EmployerNotFound -> R.string.rejection_employer_not_found
     Rejection.WorkerNotFound -> R.string.rejection_worker_not_found
+    Rejection.FutureDate -> R.string.rejection_future_date
+    Rejection.BedOccupied -> R.string.rejection_bed_occupied
+    Rejection.WorkerAlreadyHoused -> R.string.rejection_worker_already_housed
+    Rejection.SexMismatch -> R.string.rejection_sex_mismatch
+    Rejection.WorkerNotHoused -> R.string.rejection_worker_not_housed
+    Rejection.CheckOutBeforeCheckIn -> R.string.rejection_check_out_before_check_in
+    Rejection.OverlappingStay -> R.string.rejection_overlapping_stay
 }
 
 /** How a [Sex] is shown. */

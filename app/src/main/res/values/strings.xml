@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">MyWorkerLodger</string>
+
+    <string name="properties_title">Properties</string>
+    <string name="no_properties_yet">No Properties yet. Add your first one.</string>
+    <string name="add_property">Add Property</string>
+    <string name="rename_property">Rename Property</string>
+    <string name="property_name">Property name</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="rejection_blank_name">A name can\'t be blank. Enter a name.</string>
+    <string name="rejection_property_not_found">This Property no longer exists.</string>
 </resources>

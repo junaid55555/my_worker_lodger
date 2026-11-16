@@ -44,6 +44,7 @@ import com.fitnessmarket.myworkerlodger.domain.Worker
 import com.fitnessmarket.myworkerlodger.domain.WorkerId
 import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
 import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
+import com.fitnessmarket.myworkerlodger.ui.common.SectionHeading
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.display
 import com.fitnessmarket.myworkerlodger.ui.common.onIo
@@ -290,11 +291,7 @@ fun WorkerDetailScreen(
 @Composable
 private fun History(history: List<StayDetails>, onCorrect: (Stay) -> Unit) {
     HorizontalDivider()
-    Text(
-        stringResource(R.string.stay_history),
-        style = MaterialTheme.typography.titleSmall,
-        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
-    )
+    SectionHeading(R.string.stay_history)
     if (history.isEmpty()) {
         Text(stringResource(R.string.no_stays_for_worker), modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
     }

@@ -30,6 +30,7 @@ import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntryDialog
 import com.fitnessmarket.myworkerlodger.ui.labelRes
+import com.fitnessmarket.myworkerlodger.ui.summary
 import com.fitnessmarket.myworkerlodger.ui.theme.MyWorkerLodgerTheme
 
 @Composable
@@ -100,6 +101,13 @@ private fun RoomDetailContent(
         }
         ContentOrMessage(innerPadding, message) {
             LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) {
+                item {
+                    ListItem(
+                        overlineContent = { Text(stringResource(R.string.today)) },
+                        headlineContent = { Text(state.occupancy.summary()) },
+                    )
+                    HorizontalDivider()
+                }
                 items(state.beds, key = { it.id.value }) { bed ->
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.bed_title, bed.label)) },

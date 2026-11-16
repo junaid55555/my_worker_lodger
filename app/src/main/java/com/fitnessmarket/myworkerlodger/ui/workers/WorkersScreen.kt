@@ -137,6 +137,7 @@ fun WorkersScreen(
             )
             val message = when {
                 !state.loaded || state.workers.isNotEmpty() -> null
+                state.search.isNotBlank() && state.housedOnly -> R.string.no_matching_housed_workers
                 state.search.isNotBlank() -> R.string.no_matching_workers
                 state.housedOnly -> R.string.no_housed_workers
                 else -> R.string.no_workers_yet

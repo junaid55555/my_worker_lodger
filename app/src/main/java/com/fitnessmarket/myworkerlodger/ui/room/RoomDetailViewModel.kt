@@ -10,6 +10,7 @@ import com.fitnessmarket.myworkerlodger.WorkerLodgerApplication
 import com.fitnessmarket.myworkerlodger.domain.Bed
 import com.fitnessmarket.myworkerlodger.domain.BedId
 import com.fitnessmarket.myworkerlodger.domain.Housing
+import com.fitnessmarket.myworkerlodger.domain.Occupancy
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Worker
@@ -30,6 +31,8 @@ data class RoomDetailUiState(
     val beds: List<Bed> = emptyList(),
     /** The Worker in each occupied Bed. */
     val workersByBed: Map<BedId, Worker> = emptyMap(),
+    /** Today's Occupancy of the Room. */
+    val occupancy: Occupancy = Occupancy.NONE,
     val dialog: RoomDialog? = null,
 )
 
@@ -55,8 +58,16 @@ class RoomDetailViewModel(private val housing: Housing, private val roomId: Room
 
     fun refresh() {
         viewModelScope.launch {
-            val (room, beds, workersByBed) = onIo { Triple(housing.room(roomId), housing.beds(roomId), housing.workersByBed(roomId)) }
-            _state.update { it.copy(loaded = true, room = room, beds = beds, workersByBed = workersByBed) }
+            val loaded = onIo {
+                RoomDetailUiState(
+                    loaded = true,
+                    room = housing.room(roomId),
+                    beds = housing.beds(roomId),
+                    workersByBed = housing.workersByBed(roomId),
+                    occupancy = housing.roomOccupancy(roomId),
+                )
+            }
+            _state.update { loaded.copy(dialog = it.dialog) }
         }
     }
 

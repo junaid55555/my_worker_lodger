@@ -40,6 +40,7 @@
     <string name="no_workers_yet">No Workers yet. Add a Worker here or from their Employer.</string>
     <string name="no_workers_for_employer">No Workers for this Employer yet.</string>
     <string name="no_matching_workers">No Workers match your search.</string>
+    <string name="no_matching_housed_workers">No housed Workers match your search. Turn off \"Housed now\" to search former Workers too.</string>
     <string name="search_workers">Search by name or Staff Number</string>
     <string name="add_worker">Add Worker</string>
     <string name="edit_worker">Edit Worker</string>
@@ -84,6 +85,16 @@
     <string name="check_out_date">Check-out date</string>
     <string name="housed_now">Housed now</string>
     <string name="no_housed_workers">No Workers are housed right now. Turn off \"Housed now\" to see everyone.</string>
+    <string name="overview_title">Overview</string>
+    <string name="today_overall">Today, across all Properties</string>
+    <string name="today">Today</string>
+    <string name="occupancy_summary">%1$d%% full · %2$s</string>
+    <plurals name="available_beds">
+        <item quantity="one">%d Available Bed</item>
+        <item quantity="other">%d Available Beds</item>
+    </plurals>
+    <string name="no_in_service_beds">No in-service Beds</string>
+    <string name="room_summary">%1$s · %2$s</string>
     <string name="edit_bed">Edit Bed</string>
     <string name="in_service">In service</string>
     <string name="out_of_service">Out of Service</string>

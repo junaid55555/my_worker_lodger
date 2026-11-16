@@ -26,4 +26,7 @@ interface HousingStore {
     fun worker(id: WorkerId): Worker?
     fun workers(): List<Worker>
     fun saveWorker(worker: Worker)
+
+    fun stays(): List<Stay>
+    fun saveStay(stay: Stay)
 }

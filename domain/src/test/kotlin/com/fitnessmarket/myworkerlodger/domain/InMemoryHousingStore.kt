@@ -51,4 +51,12 @@ class InMemoryHousingStore : HousingStore {
     override fun saveWorker(worker: Worker) {
         workers[worker.id] = worker
     }
+
+    private val stays = linkedMapOf<StayId, Stay>()
+
+    override fun stays(): List<Stay> = stays.values.toList()
+
+    override fun saveStay(stay: Stay) {
+        stays[stay.id] = stay
+    }
 }

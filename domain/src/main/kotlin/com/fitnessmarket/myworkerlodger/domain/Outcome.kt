@@ -34,4 +34,25 @@ sealed interface Rejection {
 
     /** Another Worker of the same Employer already has this Staff Number. */
     data object DuplicateStaffNumber : Rejection
+
+    /** The date is after today; only things that have actually happened can be recorded. */
+    data object FutureDate : Rejection
+
+    /** Another Worker has a current Stay in this Bed. */
+    data object BedOccupied : Rejection
+
+    /** The Worker already has a current Stay, so they can't be checked in to a second Bed. */
+    data object WorkerAlreadyHoused : Rejection
+
+    /** The Worker's sex doesn't match the sex the Room is designated for. */
+    data object SexMismatch : Rejection
+
+    /** The Worker has no current Stay, so there is nothing to check out of. */
+    data object WorkerNotHoused : Rejection
+
+    /** A Check-out can't be dated before the Stay's Check-in. */
+    data object CheckOutBeforeCheckIn : Rejection
+
+    /** The dates would overlap another Stay of the same Worker or in the same Bed. */
+    data object OverlappingStay : Rejection
 }

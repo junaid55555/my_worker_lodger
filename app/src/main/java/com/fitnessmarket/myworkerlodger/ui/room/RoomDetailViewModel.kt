@@ -13,6 +13,7 @@ import com.fitnessmarket.myworkerlodger.domain.Housing
 import com.fitnessmarket.myworkerlodger.ui.common.runCommand
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
+import com.fitnessmarket.myworkerlodger.domain.Worker
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
 import com.fitnessmarket.myworkerlodger.ui.common.onIo
 import com.fitnessmarket.myworkerlodger.ui.navigation.Routes
@@ -27,6 +28,8 @@ data class RoomDetailUiState(
     /** Null once loaded means the Room no longer exists. */
     val room: Room? = null,
     val beds: List<Bed> = emptyList(),
+    /** The Worker in each occupied Bed. */
+    val occupants: Map<BedId, Worker> = emptyMap(),
     val dialog: RoomDialog? = null,
 )
 
@@ -56,8 +59,8 @@ class RoomDetailViewModel(private val housing: Housing, private val roomId: Room
 
     fun refresh() {
         viewModelScope.launch {
-            val (room, beds) = onIo { housing.room(roomId) to housing.beds(roomId) }
-            _state.update { it.copy(loaded = true, room = room, beds = beds) }
+            val (room, beds, occupants) = onIo { Triple(housing.room(roomId), housing.beds(roomId), housing.occupants(roomId)) }
+            _state.update { it.copy(loaded = true, room = room, beds = beds, occupants = occupants) }
         }
     }
 

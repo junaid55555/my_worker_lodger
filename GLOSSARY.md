@@ -25,7 +25,7 @@ _Avoid_: Employee ID, worker ID
 ### Space
 
 **Property**:
-A building or site that the operator uses to house Workers.
+A building or site used to house Workers.
 _Avoid_: Camp, building, site, accommodation
 
 **Room**:

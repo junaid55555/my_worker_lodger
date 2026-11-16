@@ -1,0 +1,16 @@
+package com.fitnessmarket.myworkerlodger.domain
+
+/** The result of a command: either it was accepted, or a housing rule rejected it. */
+sealed interface Outcome<out T> {
+    data class Accepted<out T>(val value: T) : Outcome<T>
+    data class Rejected(val rejection: Rejection) : Outcome<Nothing>
+}
+
+/** The housing rule that stopped a command. The app turns each one into a message. */
+sealed interface Rejection {
+    /** A name was empty or only whitespace. */
+    data object BlankName : Rejection
+
+    /** The Property the command refers to doesn't exist (for example, it was deleted). */
+    data object PropertyNotFound : Rejection
+}

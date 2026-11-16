@@ -31,9 +31,9 @@ import java.time.LocalDate
 @Composable
 fun BedDetails.describe(): String = stringResource(R.string.bed_place, property.name, room.name, bed.label)
 
-/** Choose an Available Bed and the Check-in date. */
+/** Choose an Available Bed and a date, for a Check-in or a Move. */
 @Composable
-fun CheckInDialog(
+fun ChooseBedDialog(
     @StringRes title: Int,
     beds: List<BedDetails>,
     selected: BedId?,
@@ -114,4 +114,33 @@ private fun ErrorText(@StringRes error: Int?) {
             modifier = Modifier.padding(top = 8.dp),
         )
     }
+}
+
+/** Correct the dates of a Stay. An ended Stay shows its Check-out too; a current Stay has none. */
+@Composable
+fun CorrectStayDialog(
+    checkIn: LocalDate,
+    checkOut: LocalDate?,
+    today: LocalDate,
+    @StringRes error: Int?,
+    onCheckInChange: (LocalDate) -> Unit,
+    onCheckOutChange: (LocalDate) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.correct_dates)) },
+        text = {
+            Column {
+                DateField(R.string.check_in_date, checkIn, latest = today, onChange = onCheckInChange)
+                if (checkOut != null) {
+                    DateField(R.string.check_out_date, checkOut, latest = today, onChange = onCheckOutChange)
+                }
+                ErrorText(error)
+            }
+        },
+        confirmButton = { TextButton(onClick = onSave) { Text(stringResource(R.string.save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }

@@ -10,7 +10,6 @@ import com.fitnessmarket.myworkerlodger.WorkerLodgerApplication
 import com.fitnessmarket.myworkerlodger.domain.Bed
 import com.fitnessmarket.myworkerlodger.domain.BedId
 import com.fitnessmarket.myworkerlodger.domain.Housing
-import com.fitnessmarket.myworkerlodger.domain.Outcome
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Worker
@@ -46,14 +45,9 @@ sealed interface RoomDialog {
     data class AddBeds(override val entry: TextEntry) : RoomDialog {
         override fun withEntry(entry: TextEntry) = copy(entry = entry)
     }
-
-    /** Relabel a Bed and mark it Out of Service or back in service. */
-    data class EditBed(val bedId: BedId, override val entry: TextEntry, val inService: Boolean) : RoomDialog {
-        override fun withEntry(entry: TextEntry) = copy(entry = entry)
-    }
 }
 
-/** Shows one Room and its Beds, and lets the Accommodation Manager rename it, add Beds and relabel them. */
+/** Shows one Room and its Beds, and lets the Accommodation Manager rename it and add Beds. */
 class RoomDetailViewModel(private val housing: Housing, private val roomId: RoomId) : ViewModel() {
 
     private val _state = MutableStateFlow(RoomDetailUiState())
@@ -73,11 +67,6 @@ class RoomDetailViewModel(private val housing: Housing, private val roomId: Room
 
     fun startAddingBeds() = open(RoomDialog.AddBeds(TextEntry()))
 
-    fun startEditingBed(bed: Bed) = open(RoomDialog.EditBed(bed.id, TextEntry(bed.label), bed.inService))
-
-    fun setInService(inService: Boolean) =
-        _state.update { state -> state.copy(dialog = (state.dialog as? RoomDialog.EditBed)?.copy(inService = inService) ?: state.dialog) }
-
     fun changeText(text: String) =
         _state.update { state -> state.copy(dialog = state.dialog?.run { withEntry(entry.edited(text)) }) }
 
@@ -90,12 +79,6 @@ class RoomDetailViewModel(private val housing: Housing, private val roomId: Room
                 when (dialog) {
                     is RoomDialog.Rename -> housing.renameRoom(roomId, dialog.entry.text)
                     is RoomDialog.AddBeds -> housing.addBeds(roomId, dialog.entry.labels())
-                    // The service change goes first: it's the one that can be refused (a Bed with a current
-                    // Stay can't go Out of Service), and then the label is left untouched too.
-                    is RoomDialog.EditBed -> {
-                        val service = if (dialog.inService) housing.putBackInService(dialog.bedId) else housing.markOutOfService(dialog.bedId)
-                        if (service is Outcome.Rejected) service else housing.relabelBed(dialog.bedId, dialog.entry.text)
-                    }
                 }
             },
             onRejected = { rejection ->

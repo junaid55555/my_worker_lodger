@@ -7,10 +7,10 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.fitnessmarket.myworkerlodger.WorkerLodgerApplication
 import com.fitnessmarket.myworkerlodger.domain.Housing
-import com.fitnessmarket.myworkerlodger.domain.Outcome
 import com.fitnessmarket.myworkerlodger.domain.Property
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
 import com.fitnessmarket.myworkerlodger.ui.common.onIo
+import com.fitnessmarket.myworkerlodger.ui.common.runCommand
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class PropertiesUiState(
+    val loaded: Boolean = false,
     val properties: List<Property> = emptyList(),
     /** The "Add Property" dialog, when it's open. */
     val newProperty: TextEntry? = null,
@@ -32,7 +33,7 @@ class PropertiesViewModel(private val housing: Housing) : ViewModel() {
     fun refresh() {
         viewModelScope.launch {
             val properties = onIo { housing.properties() }
-            _state.update { it.copy(properties = properties) }
+            _state.update { it.copy(loaded = true, properties = properties) }
         }
     }
 
@@ -44,14 +45,12 @@ class PropertiesViewModel(private val housing: Housing) : ViewModel() {
 
     fun save() {
         val entry = _state.value.newProperty ?: return
-        viewModelScope.launch {
-            when (val outcome = onIo { housing.addProperty(entry.text) }) {
-                is Outcome.Accepted -> {
-                    _state.update { it.copy(newProperty = null) }
-                    refresh()
-                }
-                is Outcome.Rejected -> _state.update { it.copy(newProperty = it.newProperty?.rejected(outcome.rejection)) }
-            }
+        runCommand(
+            command = { housing.addProperty(entry.text) },
+            onRejected = { rejection -> _state.update { it.copy(newProperty = it.newProperty?.rejected(rejection)) } },
+        ) {
+            closeDialog()
+            refresh()
         }
     }
 

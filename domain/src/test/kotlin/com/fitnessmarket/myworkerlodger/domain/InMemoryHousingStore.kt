@@ -31,4 +31,24 @@ class InMemoryHousingStore : HousingStore {
     override fun saveBeds(beds: List<Bed>) {
         beds.forEach { this.beds[it.id] = it }
     }
+
+    private val employers = linkedMapOf<EmployerId, Employer>()
+
+    override fun employer(id: EmployerId): Employer? = employers[id]
+
+    override fun employers(): List<Employer> = employers.values.toList()
+
+    override fun saveEmployer(employer: Employer) {
+        employers[employer.id] = employer
+    }
+
+    private val workers = linkedMapOf<WorkerId, Worker>()
+
+    override fun worker(id: WorkerId): Worker? = workers[id]
+
+    override fun workers(): List<Worker> = workers.values.toList()
+
+    override fun saveWorker(worker: Worker) {
+        workers[worker.id] = worker
+    }
 }

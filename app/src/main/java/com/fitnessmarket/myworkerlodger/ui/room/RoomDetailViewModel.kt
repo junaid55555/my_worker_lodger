@@ -10,7 +10,7 @@ import com.fitnessmarket.myworkerlodger.WorkerLodgerApplication
 import com.fitnessmarket.myworkerlodger.domain.Bed
 import com.fitnessmarket.myworkerlodger.domain.BedId
 import com.fitnessmarket.myworkerlodger.domain.Housing
-import com.fitnessmarket.myworkerlodger.domain.Outcome
+import com.fitnessmarket.myworkerlodger.ui.common.runCommand
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
@@ -77,23 +77,20 @@ class RoomDetailViewModel(private val housing: Housing, private val roomId: Room
 
     fun save() {
         val dialog = _state.value.dialog ?: return
-        viewModelScope.launch {
-            val outcome = onIo {
+        runCommand(
+            command = {
                 when (dialog) {
                     is RoomDialog.Rename -> housing.renameRoom(roomId, dialog.entry.text)
                     is RoomDialog.AddBeds -> housing.addBeds(roomId, dialog.entry.labels())
                     is RoomDialog.RelabelBed -> housing.relabelBed(dialog.bedId, dialog.entry.text)
                 }
-            }
-            when (outcome) {
-                is Outcome.Accepted -> {
-                    open(null)
-                    refresh()
-                }
-                is Outcome.Rejected -> _state.update { state ->
-                    state.copy(dialog = state.dialog?.run { withEntry(entry.rejected(outcome.rejection)) })
-                }
-            }
+            },
+            onRejected = { rejection ->
+                _state.update { state -> state.copy(dialog = state.dialog?.run { withEntry(entry.rejected(rejection)) }) }
+            },
+        ) {
+            closeDialog()
+            refresh()
         }
     }
 

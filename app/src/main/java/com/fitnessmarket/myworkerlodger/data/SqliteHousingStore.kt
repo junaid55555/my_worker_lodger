@@ -7,12 +7,16 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.fitnessmarket.myworkerlodger.domain.Bed
 import com.fitnessmarket.myworkerlodger.domain.BedId
+import com.fitnessmarket.myworkerlodger.domain.Employer
+import com.fitnessmarket.myworkerlodger.domain.EmployerId
 import com.fitnessmarket.myworkerlodger.domain.HousingStore
 import com.fitnessmarket.myworkerlodger.domain.Property
 import com.fitnessmarket.myworkerlodger.domain.PropertyId
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Sex
+import com.fitnessmarket.myworkerlodger.domain.Worker
+import com.fitnessmarket.myworkerlodger.domain.WorkerId
 
 /** The on-device [HousingStore] (ADR-0001): one SQLite database file, included in Android backup. */
 class SqliteHousingStore(context: Context) : HousingStore {
@@ -22,12 +26,18 @@ class SqliteHousingStore(context: Context) : HousingStore {
             db.execSQL(CREATE_PROPERTY)
             db.execSQL(CREATE_ROOM)
             db.execSQL(CREATE_BED)
+            db.execSQL(CREATE_EMPLOYER)
+            db.execSQL(CREATE_WORKER)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             if (oldVersion < 2) {
                 db.execSQL(CREATE_ROOM)
                 db.execSQL(CREATE_BED)
+            }
+            if (oldVersion < 3) {
+                db.execSQL(CREATE_EMPLOYER)
+                db.execSQL(CREATE_WORKER)
             }
         }
     }
@@ -84,6 +94,34 @@ class SqliteHousingStore(context: Context) : HousingStore {
         }
     }
 
+    override fun employer(id: EmployerId): Employer? =
+        query("employer", "id = ?", id.value) { it.toEmployer() }.firstOrNull()
+
+    override fun employers(): List<Employer> = query("employer") { it.toEmployer() }
+
+    override fun saveEmployer(employer: Employer) = replace(
+        "employer",
+        ContentValues().apply {
+            put("id", employer.id.value)
+            put("name", employer.name)
+        },
+    )
+
+    override fun worker(id: WorkerId): Worker? = query("worker", "id = ?", id.value) { it.toWorker() }.firstOrNull()
+
+    override fun workers(): List<Worker> = query("worker") { it.toWorker() }
+
+    override fun saveWorker(worker: Worker) = replace(
+        "worker",
+        ContentValues().apply {
+            put("id", worker.id.value)
+            put("employer_id", worker.employerId.value)
+            put("staff_number", worker.staffNumber)
+            put("name", worker.name)
+            put("sex", worker.sex.name)
+        },
+    )
+
     private fun <T> query(table: String, where: String? = null, vararg args: String, read: (Cursor) -> T): List<T> =
         helper.readableDatabase.query(table, null, where, args.takeIf { it.isNotEmpty() }, null, null, null)
             .use { cursor -> buildList { while (cursor.moveToNext()) add(read(cursor)) } }
@@ -101,9 +139,19 @@ class SqliteHousingStore(context: Context) : HousingStore {
 
     private fun Cursor.toBed() = Bed(BedId(text("id")), RoomId(text("room_id")), text("label"))
 
+    private fun Cursor.toEmployer() = Employer(EmployerId(text("id")), text("name"))
+
+    private fun Cursor.toWorker() = Worker(
+        WorkerId(text("id")),
+        EmployerId(text("employer_id")),
+        text("staff_number"),
+        text("name"),
+        Sex.valueOf(text("sex")),
+    )
+
     companion object {
         const val DATABASE_NAME = "housing.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
 
         private const val CREATE_PROPERTY =
             "CREATE TABLE property (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL)"
@@ -113,5 +161,11 @@ class SqliteHousingStore(context: Context) : HousingStore {
         private const val CREATE_BED =
             "CREATE TABLE bed (id TEXT PRIMARY KEY NOT NULL, " +
                 "room_id TEXT NOT NULL REFERENCES room(id), label TEXT NOT NULL)"
+        private const val CREATE_EMPLOYER =
+            "CREATE TABLE employer (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL)"
+        private const val CREATE_WORKER =
+            "CREATE TABLE worker (id TEXT PRIMARY KEY NOT NULL, " +
+                "employer_id TEXT NOT NULL REFERENCES employer(id), staff_number TEXT NOT NULL, " +
+                "name TEXT NOT NULL, sex TEXT NOT NULL)"
     }
 }

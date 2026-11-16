@@ -14,6 +14,7 @@ import com.fitnessmarket.myworkerlodger.domain.Occupancy
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Worker
+import com.fitnessmarket.myworkerlodger.ui.common.Deletion
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
 import com.fitnessmarket.myworkerlodger.ui.common.onIo
 import com.fitnessmarket.myworkerlodger.ui.common.runCommand
@@ -32,7 +33,7 @@ data class RoomDetailUiState(
     /** The Worker in each occupied Bed. */
     val workersByBed: Map<BedId, Worker> = emptyMap(),
     /** Today's Occupancy of the Room. */
-    val occupancy: Occupancy = Occupancy.NONE,
+    val occupancy: Occupancy = Occupancy.ZERO,
     val dialog: RoomDialog? = null,
 )
 
@@ -54,6 +55,9 @@ sealed interface RoomDialog {
 class RoomDetailViewModel(private val housing: Housing, private val roomId: RoomId) : ViewModel() {
 
     private val _state = MutableStateFlow(RoomDetailUiState())
+
+    /** Deleting this Room, which the domain refuses if it would rewrite history. */
+    val deletion = Deletion(viewModelScope) { housing.deleteRoom(roomId) }
     val state: StateFlow<RoomDetailUiState> = _state.asStateFlow()
 
     fun refresh() {

@@ -59,4 +59,12 @@ class InMemoryHousingStore : HousingStore {
     override fun saveStays(stays: List<Stay>) {
         stays.forEach { this.stays[it.id] = it }
     }
+
+    override fun remove(removal: Removal) {
+        properties.keys.removeAll(removal.propertyIds)
+        rooms.keys.removeAll(removal.roomIds)
+        beds.keys.removeAll(removal.bedIds)
+        employers.keys.removeAll(removal.employerIds)
+        workers.keys.removeAll(removal.workerIds)
+    }
 }

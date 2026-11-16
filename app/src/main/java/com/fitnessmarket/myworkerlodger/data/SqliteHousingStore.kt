@@ -12,6 +12,7 @@ import com.fitnessmarket.myworkerlodger.domain.EmployerId
 import com.fitnessmarket.myworkerlodger.domain.HousingStore
 import com.fitnessmarket.myworkerlodger.domain.Property
 import com.fitnessmarket.myworkerlodger.domain.PropertyId
+import com.fitnessmarket.myworkerlodger.domain.Removal
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Sex
@@ -142,6 +143,16 @@ class SqliteHousingStore(context: Context) : HousingStore {
     private fun <T> query(table: String, where: String? = null, vararg args: String, read: (Cursor) -> T): List<T> =
         helper.readableDatabase.query(table, null, where, args.takeIf { it.isNotEmpty() }, null, null, null)
             .use { cursor -> buildList { while (cursor.moveToNext()) add(read(cursor)) } }
+
+    override fun remove(removal: Removal) = inTransaction {
+        val db = helper.writableDatabase
+        fun delete(table: String, ids: Collection<String>) = ids.forEach { db.delete(table, "id = ?", arrayOf(it)) }
+        delete("bed", removal.bedIds.map { it.value })
+        delete("room", removal.roomIds.map { it.value })
+        delete("property", removal.propertyIds.map { it.value })
+        delete("worker", removal.workerIds.map { it.value })
+        delete("employer", removal.employerIds.map { it.value })
+    }
 
     /** Runs [block] so that all its writes are saved together or not at all. */
     private fun inTransaction(block: () -> Unit) {

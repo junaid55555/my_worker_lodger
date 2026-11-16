@@ -91,6 +91,9 @@ class Housing(
     /** Whether someone is staying in the Bed now. */
     private fun hasCurrentStay(bedId: BedId, stays: List<Stay>): Boolean = stays.any { it.bedId == bedId && it.isCurrent }
 
+    /** An Available Bed: in service, with no current Stay. */
+    private fun isAvailable(bed: Bed, stays: List<Stay>): Boolean = bed.inService && !hasCurrentStay(bed.id, stays)
+
     /** Whether the Worker has a current Stay, that is, is housed now. */
     private fun isHoused(workerId: WorkerId, stays: List<Stay>): Boolean = stays.any { it.workerId == workerId && it.isCurrent }
 
@@ -243,10 +246,10 @@ class Housing(
      */
     fun bedsAvailableFor(workerId: WorkerId): List<BedDetails> {
         val worker = store.worker(workerId) ?: return emptyList()
-        val occupied = store.stays().filter { it.isCurrent }.map { it.bedId }.toSet()
+        val stays = store.stays()
         return properties().flatMap { property ->
             rooms(property.id).filter { it.sex == worker.sex }.flatMap { room ->
-                beds(room.id).filter { it.inService && it.id !in occupied }.map { BedDetails(it, room, property) }
+                beds(room.id).filter { isAvailable(it, stays) }.map { BedDetails(it, room, property) }
             }
         }
     }
@@ -260,22 +263,75 @@ class Housing(
             .toMap()
     }
 
+    /** Deletes a Property and its Rooms and Beds, only if none of its Beds has ever had a Stay. */
+    fun deleteProperty(id: PropertyId): Outcome<Unit> {
+        if (store.property(id) == null) return Outcome.Rejected(Rejection.PropertyNotFound)
+        val rooms = store.rooms(id)
+        val beds = rooms.flatMap { store.beds(it.id) }
+        return removeUnlessStayedIn(beds, Removal(propertyIds = setOf(id), roomIds = rooms.ids(), bedIds = beds.ids()))
+    }
+
+    /** Deletes a Room and its Beds, only if none of its Beds has ever had a Stay. */
+    fun deleteRoom(id: RoomId): Outcome<Unit> {
+        if (store.room(id) == null) return Outcome.Rejected(Rejection.RoomNotFound)
+        val beds = store.beds(id)
+        return removeUnlessStayedIn(beds, Removal(roomIds = setOf(id), bedIds = beds.ids()))
+    }
+
+    /** Deletes a Bed, only if it has never had a Stay. */
+    fun deleteBed(id: BedId): Outcome<Unit> {
+        val bed = store.bed(id) ?: return Outcome.Rejected(Rejection.BedNotFound)
+        return removeUnlessStayedIn(listOf(bed), Removal(bedIds = setOf(id)))
+    }
+
+    /** Deletes a Worker, only if they have never had a Stay. */
+    fun deleteWorker(id: WorkerId): Outcome<Unit> {
+        if (store.worker(id) == null) return Outcome.Rejected(Rejection.WorkerNotFound)
+        if (store.stays().any { it.workerId == id }) return Outcome.Rejected(Rejection.HasStays)
+        store.remove(Removal(workerIds = setOf(id)))
+        return Outcome.Accepted(Unit)
+    }
+
+    /** Deletes an Employer, only if it has no Workers. */
+    fun deleteEmployer(id: EmployerId): Outcome<Unit> {
+        if (store.employer(id) == null) return Outcome.Rejected(Rejection.EmployerNotFound)
+        if (store.workers().any { it.employerId == id }) return Outcome.Rejected(Rejection.EmployerHasWorkers)
+        store.remove(Removal(employerIds = setOf(id)))
+        return Outcome.Accepted(Unit)
+    }
+
+    /** History is never rewritten: nothing is removed if any of [beds] has ever had a Stay. */
+    private fun removeUnlessStayedIn(beds: List<Bed>, removal: Removal): Outcome<Unit> {
+        val bedIds = beds.ids()
+        if (store.stays().any { it.bedId in bedIds }) return Outcome.Rejected(Rejection.HasStays)
+        store.remove(removal)
+        return Outcome.Accepted(Unit)
+    }
+
+    @JvmName("roomIds")
+    private fun List<Room>.ids() = map { it.id }.toSet()
+
+    @JvmName("bedIds")
+    private fun List<Bed>.ids() = map { it.id }.toSet()
+
     /** Today's Occupancy of one Room. */
     fun roomOccupancy(roomId: RoomId): Occupancy = occupancyOf(store.beds(roomId), store.stays())
 
     /** Today's Occupancy of one Property: all its Rooms together. */
-    fun propertyOccupancy(propertyId: PropertyId): Occupancy {
-        val stays = store.stays()
-        return store.rooms(propertyId).fold(Occupancy.NONE) { total, room -> total + occupancyOf(store.beds(room.id), stays) }
-    }
+    fun propertyOccupancy(propertyId: PropertyId): Occupancy = propertyOccupancy(propertyId, store.stays())
+
+    private fun propertyOccupancy(propertyId: PropertyId, stays: List<Stay>): Occupancy =
+        store.rooms(propertyId).fold(Occupancy.ZERO) { total, room -> total + occupancyOf(store.beds(room.id), stays) }
 
     /** Today's Occupancy across every Property. */
-    fun overallOccupancy(): Occupancy =
-        store.properties().fold(Occupancy.NONE) { total, property -> total + propertyOccupancy(property.id) }
+    fun overallOccupancy(): Occupancy {
+        val stays = store.stays()
+        return store.properties().fold(Occupancy.ZERO) { total, property -> total + propertyOccupancy(property.id, stays) }
+    }
 
     private fun occupancyOf(beds: List<Bed>, stays: List<Stay>): Occupancy {
         val inService = beds.filter { it.inService }
-        return Occupancy(bedsWithCurrentStay = inService.count { hasCurrentStay(it.id, stays) }, inServiceBeds = inService.size)
+        return Occupancy(inServiceBeds = inService.size, bedsWithCurrentStay = inService.count { !isAvailable(it, stays) })
     }
 
     /** The Bed with its Room and Property, or null if there's no such Bed. */

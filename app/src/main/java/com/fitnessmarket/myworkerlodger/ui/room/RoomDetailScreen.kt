@@ -26,11 +26,12 @@ import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Sex
 import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
+import com.fitnessmarket.myworkerlodger.ui.common.DeletionDialog
 import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntryDialog
 import com.fitnessmarket.myworkerlodger.ui.labelRes
-import com.fitnessmarket.myworkerlodger.ui.summary
+import com.fitnessmarket.myworkerlodger.ui.TodayOccupancy
 import com.fitnessmarket.myworkerlodger.ui.theme.MyWorkerLodgerTheme
 
 @Composable
@@ -40,11 +41,13 @@ fun RoomDetailScreen(
     viewModel: RoomDetailViewModel = viewModel(factory = RoomDetailViewModel.Factory),
 ) {
     RefreshOnResume(viewModel::refresh)
+    DeletionDialog(viewModel.deletion, R.string.delete_room, R.string.delete_room_message, onDeleted = onBack)
     val state by viewModel.state.collectAsStateWithLifecycle()
     RoomDetailContent(
         state = state,
         onBack = onBack,
         onRename = viewModel::startRenaming,
+        onDelete = viewModel.deletion::start,
         onAddBeds = viewModel::startAddingBeds,
         onBedClick = { onOpenBed(it.id) },
     )
@@ -72,6 +75,7 @@ private fun RoomDetailContent(
     state: RoomDetailUiState,
     onBack: () -> Unit,
     onRename: () -> Unit,
+    onDelete: () -> Unit,
     onAddBeds: () -> Unit,
     onBedClick: (Bed) -> Unit,
 ) {
@@ -85,6 +89,7 @@ private fun RoomDetailContent(
                 onBack = onBack,
             ) {
                 if (room != null) TextButton(onClick = onRename) { Text(stringResource(R.string.rename)) }
+                if (room != null) TextButton(onClick = onDelete) { Text(stringResource(R.string.delete)) }
             }
         },
         floatingActionButton = {
@@ -101,13 +106,7 @@ private fun RoomDetailContent(
         }
         ContentOrMessage(innerPadding, message) {
             LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) {
-                item {
-                    ListItem(
-                        overlineContent = { Text(stringResource(R.string.today)) },
-                        headlineContent = { Text(state.occupancy.summary()) },
-                    )
-                    HorizontalDivider()
-                }
+                item { TodayOccupancy(state.occupancy, state.loaded) }
                 items(state.beds, key = { it.id.value }) { bed ->
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.bed_title, bed.label)) },
@@ -139,7 +138,7 @@ private fun RoomDetailPreview() {
                 room = room,
                 beds = listOf("1A", "1B", "2A", "2B").map { Bed(BedId(it), room.id, it) },
             ),
-            onBack = {}, onRename = {}, onAddBeds = {}, onBedClick = {},
+            onBack = {}, onRename = {}, onDelete = {}, onAddBeds = {}, onBedClick = {},
         )
     }
 }

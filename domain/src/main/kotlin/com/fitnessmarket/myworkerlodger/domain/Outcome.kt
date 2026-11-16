@@ -70,4 +70,10 @@ sealed interface Rejection {
 
     /** A correction removed the Check-out of an ended Stay; an ended Stay always has one. */
     data object CheckOutRequired : Rejection
+
+    /** It has a past or current Stay (or contains a Bed that does), so deleting it would rewrite history. */
+    data object HasStays : Rejection
+
+    /** The Employer still has Workers, so it can't be deleted. */
+    data object EmployerHasWorkers : Rejection
 }

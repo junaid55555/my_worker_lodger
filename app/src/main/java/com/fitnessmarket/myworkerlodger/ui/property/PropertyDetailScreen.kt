@@ -33,11 +33,13 @@ import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Sex
 import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
+import com.fitnessmarket.myworkerlodger.ui.common.DeletionDialog
 import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
 import com.fitnessmarket.myworkerlodger.ui.common.SexChoice
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntryDialog
 import com.fitnessmarket.myworkerlodger.ui.labelRes
+import com.fitnessmarket.myworkerlodger.ui.TodayOccupancy
 import com.fitnessmarket.myworkerlodger.ui.summary
 import com.fitnessmarket.myworkerlodger.ui.theme.MyWorkerLodgerTheme
 
@@ -48,11 +50,13 @@ fun PropertyDetailScreen(
     viewModel: PropertyDetailViewModel = viewModel(factory = PropertyDetailViewModel.Factory),
 ) {
     RefreshOnResume(viewModel::refresh)
+    DeletionDialog(viewModel.deletion, R.string.delete_property, R.string.delete_property_message, onDeleted = onBack)
     val state by viewModel.state.collectAsStateWithLifecycle()
     PropertyDetailContent(
         state = state,
         onBack = onBack,
         onRename = viewModel::startRenaming,
+        onDelete = viewModel.deletion::start,
         onAddRoom = viewModel::startAddingRoom,
         onOpenRoom = onOpenRoom,
     )
@@ -85,6 +89,7 @@ private fun PropertyDetailContent(
     state: PropertyDetailUiState,
     onBack: () -> Unit,
     onRename: () -> Unit,
+    onDelete: () -> Unit,
     onAddRoom: () -> Unit,
     onOpenRoom: (RoomId) -> Unit,
 ) {
@@ -94,6 +99,7 @@ private fun PropertyDetailContent(
         topBar = {
             ScreenTopBar(title = property?.name.orEmpty(), onBack = onBack) {
                 if (property != null) TextButton(onClick = onRename) { Text(stringResource(R.string.rename)) }
+                if (property != null) TextButton(onClick = onDelete) { Text(stringResource(R.string.delete)) }
             }
         },
         floatingActionButton = {
@@ -110,13 +116,7 @@ private fun PropertyDetailContent(
         }
         ContentOrMessage(innerPadding, message) {
             LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) {
-                item {
-                    ListItem(
-                        overlineContent = { Text(stringResource(R.string.today)) },
-                        headlineContent = { Text(state.occupancy.summary()) },
-                    )
-                    HorizontalDivider()
-                }
+                item { TodayOccupancy(state.occupancy, state.loaded) }
                 items(state.rooms, key = { it.id.value }) { room ->
                     ListItem(
                         headlineContent = { Text(room.name) },
@@ -147,7 +147,7 @@ private fun PropertyDetailPreview() {
                     Room(RoomId("2"), property.id, "B-205", Sex.Female),
                 ),
             ),
-            onBack = {}, onRename = {}, onAddRoom = {}, onOpenRoom = {},
+            onBack = {}, onRename = {}, onDelete = {}, onAddRoom = {}, onOpenRoom = {},
         )
     }
 }

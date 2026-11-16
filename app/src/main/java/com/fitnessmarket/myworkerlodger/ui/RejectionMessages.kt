@@ -29,6 +29,8 @@ fun Rejection.messageRes(): Int = when (this) {
     Rejection.StayNotFound -> R.string.rejection_stay_not_found
     Rejection.StayIsCurrent -> R.string.rejection_stay_is_current
     Rejection.CheckOutRequired -> R.string.rejection_check_out_required
+    Rejection.HasStays -> R.string.rejection_has_stays
+    Rejection.EmployerHasWorkers -> R.string.rejection_employer_has_workers
 }
 
 /** How a [Sex] is shown. */

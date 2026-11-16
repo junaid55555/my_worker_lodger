@@ -43,6 +43,8 @@ import com.fitnessmarket.myworkerlodger.domain.Today
 import com.fitnessmarket.myworkerlodger.domain.Worker
 import com.fitnessmarket.myworkerlodger.domain.WorkerId
 import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
+import com.fitnessmarket.myworkerlodger.ui.common.Deletion
+import com.fitnessmarket.myworkerlodger.ui.common.DeletionDialog
 import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
 import com.fitnessmarket.myworkerlodger.ui.common.SectionHeading
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
@@ -117,6 +119,9 @@ class WorkerDetailViewModel(
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WorkerDetailUiState())
+
+    /** Deleting this Worker, which the domain refuses if it would rewrite history. */
+    val deletion = Deletion(viewModelScope) { housing.deleteWorker(workerId) }
     val state = _state.asStateFlow()
 
     val todayDate: LocalDate get() = today.date()
@@ -228,6 +233,7 @@ fun WorkerDetailScreen(
     viewModel: WorkerDetailViewModel = viewModel(factory = WorkerDetailViewModel.Factory),
 ) {
     RefreshOnResume(viewModel::refresh)
+    DeletionDialog(viewModel.deletion, R.string.delete_worker, R.string.delete_worker_message, onDeleted = onBack)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val worker = state.worker
     Scaffold(
@@ -235,6 +241,7 @@ fun WorkerDetailScreen(
         topBar = {
             ScreenTopBar(title = worker?.name.orEmpty(), onBack = onBack) {
                 if (worker != null) TextButton(onClick = viewModel::startEditing) { Text(stringResource(R.string.edit)) }
+                if (worker != null) TextButton(onClick = viewModel.deletion::start) { Text(stringResource(R.string.delete)) }
             }
         },
     ) { innerPadding ->

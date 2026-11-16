@@ -14,6 +14,7 @@ import com.fitnessmarket.myworkerlodger.domain.PropertyId
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Sex
+import com.fitnessmarket.myworkerlodger.ui.common.Deletion
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
 import com.fitnessmarket.myworkerlodger.ui.common.onIo
 import com.fitnessmarket.myworkerlodger.ui.common.runCommand
@@ -30,7 +31,7 @@ data class PropertyDetailUiState(
     val property: Property? = null,
     val rooms: List<Room> = emptyList(),
     /** Today's Occupancy of the whole Property, and of each of its Rooms. */
-    val occupancy: Occupancy = Occupancy.NONE,
+    val occupancy: Occupancy = Occupancy.ZERO,
     val roomOccupancy: Map<RoomId, Occupancy> = emptyMap(),
     val dialog: PropertyDialog? = null,
 )
@@ -52,6 +53,9 @@ sealed interface PropertyDialog {
 class PropertyDetailViewModel(private val housing: Housing, private val propertyId: PropertyId) : ViewModel() {
 
     private val _state = MutableStateFlow(PropertyDetailUiState())
+
+    /** Deleting this Property, which the domain refuses if it would rewrite history. */
+    val deletion = Deletion(viewModelScope) { housing.deleteProperty(propertyId) }
     val state: StateFlow<PropertyDetailUiState> = _state.asStateFlow()
 
     fun refresh() {

@@ -31,6 +31,8 @@ import com.fitnessmarket.myworkerlodger.domain.Housing
 import com.fitnessmarket.myworkerlodger.domain.Worker
 import com.fitnessmarket.myworkerlodger.domain.WorkerId
 import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
+import com.fitnessmarket.myworkerlodger.ui.common.Deletion
+import com.fitnessmarket.myworkerlodger.ui.common.DeletionDialog
 import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntry
@@ -59,6 +61,9 @@ data class EmployerDetailUiState(
 class EmployerDetailViewModel(private val housing: Housing, private val employerId: EmployerId) : ViewModel() {
 
     private val _state = MutableStateFlow(EmployerDetailUiState())
+
+    /** Deleting this Employer, which the domain refuses if it would rewrite history. */
+    val deletion = Deletion(viewModelScope) { housing.deleteEmployer(employerId) }
     val state = _state.asStateFlow()
 
     fun refresh() {
@@ -117,6 +122,7 @@ fun EmployerDetailScreen(
     viewModel: EmployerDetailViewModel = viewModel(factory = EmployerDetailViewModel.Factory),
 ) {
     RefreshOnResume(viewModel::refresh)
+    DeletionDialog(viewModel.deletion, R.string.delete_employer, R.string.delete_employer_message, onDeleted = onBack)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val employer = state.employer
     Scaffold(
@@ -124,6 +130,7 @@ fun EmployerDetailScreen(
         topBar = {
             ScreenTopBar(title = employer?.name.orEmpty(), onBack = onBack) {
                 if (employer != null) TextButton(onClick = viewModel::startRenaming) { Text(stringResource(R.string.rename)) }
+                if (employer != null) TextButton(onClick = viewModel.deletion::start) { Text(stringResource(R.string.delete)) }
             }
         },
         floatingActionButton = {

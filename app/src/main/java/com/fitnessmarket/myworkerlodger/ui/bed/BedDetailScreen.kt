@@ -38,6 +38,8 @@ import com.fitnessmarket.myworkerlodger.domain.BedStay
 import com.fitnessmarket.myworkerlodger.domain.Housing
 import com.fitnessmarket.myworkerlodger.domain.WorkerId
 import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
+import com.fitnessmarket.myworkerlodger.ui.common.Deletion
+import com.fitnessmarket.myworkerlodger.ui.common.DeletionDialog
 import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
 import com.fitnessmarket.myworkerlodger.ui.common.SectionHeading
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
@@ -67,6 +69,9 @@ data class BedEdit(val label: TextEntry, val inService: Boolean)
 class BedDetailViewModel(private val housing: Housing, private val bedId: BedId) : ViewModel() {
 
     private val _state = MutableStateFlow(BedDetailUiState())
+
+    /** Deleting this Bed, which the domain refuses if it would rewrite history. */
+    val deletion = Deletion(viewModelScope) { housing.deleteBed(bedId) }
     val state = _state.asStateFlow()
 
     fun refresh() {
@@ -115,6 +120,7 @@ fun BedDetailScreen(
     viewModel: BedDetailViewModel = viewModel(factory = BedDetailViewModel.Factory),
 ) {
     RefreshOnResume(viewModel::refresh)
+    DeletionDialog(viewModel.deletion, R.string.delete_bed, R.string.delete_bed_message, onDeleted = onBack)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val details = state.bed
     Scaffold(
@@ -126,6 +132,7 @@ fun BedDetailScreen(
                 onBack = onBack,
             ) {
                 if (details != null) TextButton(onClick = viewModel::startEditing) { Text(stringResource(R.string.edit)) }
+                if (details != null) TextButton(onClick = viewModel.deletion::start) { Text(stringResource(R.string.delete)) }
             }
         },
     ) { innerPadding ->

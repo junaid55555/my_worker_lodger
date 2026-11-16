@@ -95,6 +95,19 @@
     </plurals>
     <string name="no_in_service_beds">No in-service Beds</string>
     <string name="room_summary">%1$s · %2$s</string>
+    <string name="delete">Delete</string>
+    <string name="rejection_has_stays">This can\'t be deleted because it has Stays (past or current). Deleting it would change the history of where Workers lived.</string>
+    <string name="rejection_employer_has_workers">This Employer still has Workers, so it can\'t be deleted.</string>
+    <string name="delete_property">Delete Property?</string>
+    <string name="delete_property_message">This also deletes all its Rooms and Beds. It\'s only allowed if no one has ever stayed in them.</string>
+    <string name="delete_room">Delete Room?</string>
+    <string name="delete_room_message">This also deletes all its Beds. It\'s only allowed if no one has ever stayed in them.</string>
+    <string name="delete_bed">Delete Bed?</string>
+    <string name="delete_bed_message">This is only allowed if no one has ever stayed in this Bed.</string>
+    <string name="delete_employer">Delete Employer?</string>
+    <string name="delete_employer_message">This is only allowed if the Employer has no Workers.</string>
+    <string name="delete_worker">Delete Worker?</string>
+    <string name="delete_worker_message">This is only allowed if the Worker has never stayed in a Bed.</string>
     <string name="edit_bed">Edit Bed</string>
     <string name="in_service">In service</string>
     <string name="out_of_service">Out of Service</string>

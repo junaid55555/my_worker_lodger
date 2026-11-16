@@ -20,9 +20,9 @@ class OccupancyTest {
 
     @Test
     fun `a Room's Occupancy counts Beds with a current Stay against its in-service Beds`() {
-        housing.checkIn(workers[0].id, beds204[0].id, today)
-        housing.checkIn(workers[1].id, beds204[1].id, today)
-        housing.markOutOfService(beds204[3].id)
+        housing.checkIn(workers[0].id, beds204[0].id, today).accepted()
+        housing.checkIn(workers[1].id, beds204[1].id, today).accepted()
+        housing.markOutOfService(beds204[3].id).accepted()
 
         val occupancy = housing.roomOccupancy(room204.id)
 
@@ -33,8 +33,8 @@ class OccupancyTest {
 
     @Test
     fun `a Stay that has ended doesn't count towards Occupancy`() {
-        housing.checkIn(workers[0].id, beds204[0].id, today.minusDays(5))
-        housing.checkOut(workers[0].id, today.minusDays(1))
+        housing.checkIn(workers[0].id, beds204[0].id, today.minusDays(5)).accepted()
+        housing.checkOut(workers[0].id, today.minusDays(1)).accepted()
 
         assertEquals(Occupancy(bedsWithCurrentStay = 0, inServiceBeds = 4), housing.roomOccupancy(room204.id))
     }
@@ -60,5 +60,22 @@ class OccupancyTest {
         assertEquals(null, housing.roomOccupancy(room205.id).share)
         assertEquals(0, housing.roomOccupancy(room205.id).availableBeds)
         assertEquals(null, housing.roomOccupancy(emptyRoom.id).share)
+    }
+
+    @Test
+    fun `a Property or the whole of every Property with no in-service Beds has no Occupancy share`() {
+        (beds204 + beds205).forEach { housing.markOutOfService(it.id).accepted() }
+
+        assertEquals(null, housing.propertyOccupancy(alQuoz.id).share)
+        assertEquals(null, housing.overallOccupancy().share)
+    }
+
+    @Test
+    fun `the percentage full rounds down, but shows at least 1 when any Bed has a current Stay`() {
+        assertEquals(99, Occupancy(bedsWithCurrentStay = 199, inServiceBeds = 200).percentFull)
+        assertEquals(1, Occupancy(bedsWithCurrentStay = 1, inServiceBeds = 201).percentFull)
+        assertEquals(0, Occupancy(bedsWithCurrentStay = 0, inServiceBeds = 4).percentFull)
+        assertEquals(100, Occupancy(bedsWithCurrentStay = 4, inServiceBeds = 4).percentFull)
+        assertEquals(null, Occupancy(bedsWithCurrentStay = 0, inServiceBeds = 0).percentFull)
     }
 }

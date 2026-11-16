@@ -30,4 +30,16 @@ interface HousingStore {
     fun stays(): List<Stay>
     /** Saves all [stays] together: either every one is saved or none is. */
     fun saveStays(stays: List<Stay>)
+
+    /** Removes everything in [removal] together: either all of it is removed or none of it is. */
+    fun remove(removal: Removal)
 }
+
+/** Records to remove from a [HousingStore] in one go, such as a Room together with its Beds. */
+data class Removal(
+    val propertyIds: Set<PropertyId> = emptySet(),
+    val roomIds: Set<RoomId> = emptySet(),
+    val bedIds: Set<BedId> = emptySet(),
+    val employerIds: Set<EmployerId> = emptySet(),
+    val workerIds: Set<WorkerId> = emptySet(),
+)

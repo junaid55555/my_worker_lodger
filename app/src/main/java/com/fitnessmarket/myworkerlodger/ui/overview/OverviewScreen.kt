@@ -41,11 +41,11 @@ import kotlinx.coroutines.launch
 
 data class OverviewUiState(
     val loaded: Boolean = false,
-    val overall: Occupancy = Occupancy.NONE,
+    val overall: Occupancy = Occupancy.ZERO,
     val properties: List<Pair<Property, Occupancy>> = emptyList(),
 )
 
-/** Today's Occupancy and Available Beds across all the accommodation, and for each Property. */
+/** Today's Occupancy and Available Beds across every Property, and for each one. */
 class OverviewViewModel(private val housing: Housing) : ViewModel() {
 
     private val _state = MutableStateFlow(OverviewUiState())
@@ -84,7 +84,7 @@ fun OverviewScreen(
     ) { innerPadding ->
         ContentOrMessage(innerPadding, R.string.no_properties_yet.takeIf { state.loaded && state.properties.isEmpty() }) {
             LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) {
-                item {
+                if (state.loaded) item {
                     Column(Modifier.padding(16.dp)) {
                         Text(stringResource(R.string.today_overall), style = MaterialTheme.typography.labelMedium)
                         Text(state.overall.summary(), style = MaterialTheme.typography.headlineSmall)

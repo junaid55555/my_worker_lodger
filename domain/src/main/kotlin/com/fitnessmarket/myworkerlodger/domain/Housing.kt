@@ -68,6 +68,19 @@ class Housing(
         return Outcome.Accepted(relabelled)
     }
 
+    /** Marks a Bed Out of Service, for example because it's broken, so no Worker can check in to it. */
+    fun markOutOfService(id: BedId): Outcome<Bed> = setInService(id, inService = false)
+
+    fun putBackInService(id: BedId): Outcome<Bed> = setInService(id, inService = true)
+
+    private fun setInService(id: BedId, inService: Boolean): Outcome<Bed> {
+        val bed = store.bed(id) ?: return Outcome.Rejected(Rejection.BedNotFound)
+        if (!inService && store.stays().any { it.bedId == id && it.isCurrent }) return Outcome.Rejected(Rejection.BedOccupied)
+        val changed = bed.copy(inService = inService)
+        store.saveBeds(listOf(changed))
+        return Outcome.Accepted(changed)
+    }
+
     fun beds(roomId: RoomId): List<Bed> = store.beds(roomId).sortedWith(compareBy(NaturalOrder) { it.label })
 
     fun room(id: RoomId): Room? = store.room(id)
@@ -112,7 +125,7 @@ class Housing(
 
     fun checkIn(workerId: WorkerId, bedId: BedId, date: LocalDate): Outcome<Stay> {
         checkInProblem(workerId, bedId, date, store.stays())?.let { return Outcome.Rejected(it) }
-        val stay = Stay(StayId(UUID.randomUUID().toString()), workerId, bedId, date)
+        val stay = newStay(workerId, bedId, date)
         store.saveStays(listOf(stay))
         return Outcome.Accepted(stay)
     }
@@ -123,15 +136,14 @@ class Housing(
      * Check-in rule, the current Stay is left as it was.
      */
     fun move(workerId: WorkerId, bedId: BedId, date: LocalDate): Outcome<Stay> {
-        if (store.worker(workerId) == null) return Outcome.Rejected(Rejection.WorkerNotFound)
-        val current = currentStayOf(workerId) ?: return Outcome.Rejected(Rejection.WorkerNotHoused)
-        if (current.bedId == bedId) return Outcome.Rejected(Rejection.AlreadyInThatBed)
-        if (date.isAfter(today.date())) return Outcome.Rejected(Rejection.FutureDate)
-        if (date.isBefore(current.checkIn)) return Outcome.Rejected(Rejection.CheckOutBeforeCheckIn)
-        val ended = current.copy(checkOut = date)
-        val staysAfterCheckOut = store.stays().map { if (it.id == current.id) ended else it }
+        val ended = when (val checkOut = endCurrentStay(workerId, date)) {
+            is Outcome.Rejected -> return checkOut
+            is Outcome.Accepted -> checkOut.value
+        }
+        if (ended.bedId == bedId) return Outcome.Rejected(Rejection.AlreadyInThatBed)
+        val staysAfterCheckOut = store.stays().map { if (it.id == ended.id) ended else it }
         checkInProblem(workerId, bedId, date, staysAfterCheckOut)?.let { return Outcome.Rejected(it) }
-        val started = Stay(StayId(UUID.randomUUID().toString()), workerId, bedId, date)
+        val started = newStay(workerId, bedId, date)
         store.saveStays(listOf(ended, started))
         return Outcome.Accepted(started)
     }
@@ -145,6 +157,7 @@ class Housing(
             date.isAfter(today.date()) -> Rejection.FutureDate
             stays.any { it.workerId == workerId && it.isCurrent } -> Rejection.WorkerAlreadyHoused
             stays.any { it.bedId == bedId && it.isCurrent } -> Rejection.BedOccupied
+            !bed.inService -> Rejection.BedOutOfService
             worker.sex != room.sex -> Rejection.SexMismatch
             stays.any { (it.workerId == workerId || it.bedId == bedId) && it.overlaps(date, until = null) } ->
                 Rejection.OverlappingStay
@@ -153,14 +166,25 @@ class Housing(
     }
 
     fun checkOut(workerId: WorkerId, date: LocalDate): Outcome<Stay> {
+        val ended = when (val checkOut = endCurrentStay(workerId, date)) {
+            is Outcome.Rejected -> return checkOut
+            is Outcome.Accepted -> checkOut.value
+        }
+        store.saveStays(listOf(ended))
+        return Outcome.Accepted(ended)
+    }
+
+    /** The Worker's current Stay as it would be with a Check-out on [date], checked but not yet saved. */
+    private fun endCurrentStay(workerId: WorkerId, date: LocalDate): Outcome<Stay> {
         if (store.worker(workerId) == null) return Outcome.Rejected(Rejection.WorkerNotFound)
         val stay = currentStayOf(workerId) ?: return Outcome.Rejected(Rejection.WorkerNotHoused)
         if (date.isAfter(today.date())) return Outcome.Rejected(Rejection.FutureDate)
         if (date.isBefore(stay.checkIn)) return Outcome.Rejected(Rejection.CheckOutBeforeCheckIn)
-        val ended = stay.copy(checkOut = date)
-        store.saveStays(listOf(ended))
-        return Outcome.Accepted(ended)
+        return Outcome.Accepted(stay.copy(checkOut = date))
     }
+
+    private fun newStay(workerId: WorkerId, bedId: BedId, date: LocalDate) =
+        Stay(StayId(UUID.randomUUID().toString()), workerId, bedId, date)
 
     /** Every Stay the Worker has had, most recent Check-in first. */
     fun staysOf(workerId: WorkerId): List<StayDetails> =
@@ -172,7 +196,8 @@ class Housing(
     private fun currentStayOf(workerId: WorkerId): Stay? = store.stays().firstOrNull { it.workerId == workerId && it.isCurrent }
 
     /**
-     * The Beds a Worker can be checked in to now: Available Beds in Rooms of the Worker's sex,
+     * The Beds a Worker can be checked in to now: in-service Beds with no current Stay (Available
+     * Beds) in Rooms of the Worker's sex,
      * ordered by Property, then Room, then Bed.
      */
     fun bedsAvailableFor(workerId: WorkerId): List<BedDetails> {
@@ -180,7 +205,7 @@ class Housing(
         val occupied = store.stays().filter { it.isCurrent }.map { it.bedId }.toSet()
         return properties().flatMap { property ->
             rooms(property.id).filter { it.sex == worker.sex }.flatMap { room ->
-                beds(room.id).filter { it.id !in occupied }.map { BedDetails(it, room, property) }
+                beds(room.id).filter { it.inService && it.id !in occupied }.map { BedDetails(it, room, property) }
             }
         }
     }

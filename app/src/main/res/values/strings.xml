@@ -23,7 +23,6 @@
 
     <string name="no_beds_yet">No Beds yet. Add the Beds in this Room.</string>
     <string name="add_beds">Add Beds</string>
-    <string name="relabel_bed">Relabel Bed</string>
     <string name="bed_label">Bed label</string>
     <string name="bed_labels">Bed labels</string>
     <string name="bed_labels_hint">To add several Beds, separate the labels with commas, for example 1A, 1B, 2A.</string>
@@ -67,8 +66,12 @@
     <string name="rejection_worker_not_housed">This Worker isn\'t staying in any Bed right now.</string>
     <string name="rejection_check_out_before_check_in">The Check-out can\'t be before the Check-in.</string>
     <string name="rejection_overlapping_stay">Those dates overlap another Stay of this Worker or in this Bed.</string>
-    <string name="rejection_already_in_that_bed">The Worker is already in this Bed. Choose a different Bed to move them to.</string>
+    <string name="rejection_already_in_that_bed">The Worker is already in this Bed. Choose a different Bed for the Move.</string>
+    <string name="rejection_bed_out_of_service">This Bed is Out of Service. Choose another Bed, or put it back in service first.</string>
     <string name="move">Move</string>
+    <string name="edit_bed">Edit Bed</string>
+    <string name="in_service">In service</string>
+    <string name="out_of_service">Out of Service</string>
 
     <string name="change">Change</string>
     <string name="ok">OK</string>

@@ -44,6 +44,7 @@ class SqliteHousingStore(context: Context) : HousingStore {
                 db.execSQL(CREATE_WORKER)
             }
             if (oldVersion < 4) db.execSQL(CREATE_STAY)
+            if (oldVersion < 5) db.execSQL("ALTER TABLE bed ADD COLUMN in_service INTEGER NOT NULL DEFAULT 1")
         }
     }
 
@@ -87,6 +88,7 @@ class SqliteHousingStore(context: Context) : HousingStore {
                     put("id", bed.id.value)
                     put("room_id", bed.roomId.value)
                     put("label", bed.label)
+                    put("in_service", if (bed.inService) 1 else 0)
                 },
             )
         }
@@ -164,7 +166,12 @@ class SqliteHousingStore(context: Context) : HousingStore {
     private fun Cursor.toRoom() =
         Room(RoomId(text("id")), PropertyId(text("property_id")), text("name"), Sex.valueOf(text("sex")))
 
-    private fun Cursor.toBed() = Bed(BedId(text("id")), RoomId(text("room_id")), text("label"))
+    private fun Cursor.toBed() = Bed(
+        BedId(text("id")),
+        RoomId(text("room_id")),
+        text("label"),
+        inService = getInt(getColumnIndexOrThrow("in_service")) == 1,
+    )
 
     private fun Cursor.toStay() = Stay(
         StayId(text("id")),
@@ -186,7 +193,7 @@ class SqliteHousingStore(context: Context) : HousingStore {
 
     companion object {
         const val DATABASE_NAME = "housing.db"
-        private const val DATABASE_VERSION = 4
+        private const val DATABASE_VERSION = 5
 
         private const val CREATE_PROPERTY =
             "CREATE TABLE property (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL)"
@@ -195,7 +202,7 @@ class SqliteHousingStore(context: Context) : HousingStore {
                 "property_id TEXT NOT NULL REFERENCES property(id), name TEXT NOT NULL, sex TEXT NOT NULL)"
         private const val CREATE_BED =
             "CREATE TABLE bed (id TEXT PRIMARY KEY NOT NULL, " +
-                "room_id TEXT NOT NULL REFERENCES room(id), label TEXT NOT NULL)"
+                "room_id TEXT NOT NULL REFERENCES room(id), label TEXT NOT NULL, in_service INTEGER NOT NULL DEFAULT 1)"
         private const val CREATE_EMPLOYER =
             "CREATE TABLE employer (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL)"
         private const val CREATE_WORKER =

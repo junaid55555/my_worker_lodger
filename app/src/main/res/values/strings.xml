@@ -67,6 +67,8 @@
     <string name="rejection_worker_not_housed">This Worker isn\'t staying in any Bed right now.</string>
     <string name="rejection_check_out_before_check_in">The Check-out can\'t be before the Check-in.</string>
     <string name="rejection_overlapping_stay">Those dates overlap another Stay of this Worker or in this Bed.</string>
+    <string name="rejection_already_in_that_bed">The Worker is already in this Bed. Choose a different Bed to move them to.</string>
+    <string name="move">Move</string>
 
     <string name="change">Change</string>
     <string name="ok">OK</string>

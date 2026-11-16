@@ -28,5 +28,6 @@ interface HousingStore {
     fun saveWorker(worker: Worker)
 
     fun stays(): List<Stay>
-    fun saveStay(stay: Stay)
+    /** Saves all [stays] together: either every one is saved or none is. */
+    fun saveStays(stays: List<Stay>)
 }

@@ -107,7 +107,7 @@ private fun RoomDetailContent(
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.bed_title, bed.label)) },
                         supportingContent = {
-                            Text(state.occupants[bed.id]?.name ?: stringResource(R.string.available))
+                            Text(state.workersByBed[bed.id]?.name ?: stringResource(R.string.available))
                         },
                         modifier = Modifier.clickable { onBedClick(bed) },
                     )

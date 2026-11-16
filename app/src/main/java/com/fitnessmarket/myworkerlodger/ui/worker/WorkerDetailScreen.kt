@@ -58,15 +58,17 @@ data class WorkerDetailUiState(
     /** Null once loaded means the Worker no longer exists. */
     val worker: Worker? = null,
     val employer: Employer? = null,
-    /** Where the Worker lives now, or null if they aren't housed. */
-    val currentPlace: StayDetails? = null,
+    /** The Worker's current Stay, or null if they aren't housed. */
+    val currentStay: StayDetails? = null,
     val dialog: WorkerDialog? = null,
 )
 
 sealed interface WorkerDialog {
     data class Edit(val form: WorkerForm) : WorkerDialog
 
+    /** Choosing a Bed and a date: a Check-in, or a Move when [moving] is true. */
     data class CheckIn(
+        val moving: Boolean,
         val beds: List<BedDetails>,
         val bedId: BedId? = null,
         val date: LocalDate,
@@ -92,9 +94,9 @@ class WorkerDetailViewModel(
         viewModelScope.launch {
             val (worker, employer, place) = onIo {
                 val worker = housing.worker(workerId)
-                Triple(worker, worker?.let { housing.employer(it.employerId) }, housing.currentPlace(workerId))
+                Triple(worker, worker?.let { housing.employer(it.employerId) }, housing.currentStay(workerId))
             }
-            _state.update { it.copy(loaded = true, worker = worker, employer = employer, currentPlace = place) }
+            _state.update { it.copy(loaded = true, worker = worker, employer = employer, currentStay = place) }
         }
     }
 
@@ -105,10 +107,14 @@ class WorkerDetailViewModel(
 
     fun changeForm(form: WorkerForm) = open(WorkerDialog.Edit(form))
 
-    fun startCheckIn() {
+    fun startCheckIn() = chooseBed(moving = false)
+
+    fun startMove() = chooseBed(moving = true)
+
+    private fun chooseBed(moving: Boolean) {
         viewModelScope.launch {
             val beds = onIo { housing.bedsAvailableFor(workerId) }
-            open(WorkerDialog.CheckIn(beds = beds, date = todayDate))
+            open(WorkerDialog.CheckIn(moving = moving, beds = beds, date = todayDate))
         }
     }
 
@@ -132,7 +138,9 @@ class WorkerDetailViewModel(
             is WorkerDialog.CheckIn -> {
                 val bedId = dialog.bedId ?: return open(dialog.copy(error = R.string.choose_a_bed))
                 runCommand(
-                    command = { housing.checkIn(workerId, bedId, dialog.date) },
+                    command = {
+                        if (dialog.moving) housing.move(workerId, bedId, dialog.date) else housing.checkIn(workerId, bedId, dialog.date)
+                    },
                     onRejected = { open(dialog.copy(error = it.messageRes())) },
                 ) { closeAndRefresh() }
             }
@@ -186,7 +194,7 @@ fun WorkerDetailScreen(
         ContentOrMessage(innerPadding, R.string.rejection_worker_not_found.takeIf { state.loaded && worker == null }) {
             if (worker != null) {
                 Column(Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState())) {
-                    CurrentPlace(state.currentPlace, viewModel::startCheckIn, viewModel::startCheckOut)
+                    LivingIn(state.currentStay, viewModel::startCheckIn, viewModel::startMove, viewModel::startCheckOut)
                     HorizontalDivider()
                     Detail(R.string.employer, state.employer?.name.orEmpty())
                     Detail(R.string.staff_number, worker.staffNumber)
@@ -198,7 +206,7 @@ fun WorkerDetailScreen(
     when (val dialog = state.dialog) {
         is WorkerDialog.Edit -> WorkerFormDialog(dialog.form, viewModel::changeForm, viewModel::save, viewModel::closeDialog)
         is WorkerDialog.CheckIn -> CheckInDialog(
-            title = R.string.check_in,
+            title = if (dialog.moving) R.string.move else R.string.check_in,
             beds = dialog.beds,
             selected = dialog.bedId,
             date = dialog.date,
@@ -222,19 +230,20 @@ fun WorkerDetailScreen(
 }
 
 @Composable
-private fun CurrentPlace(place: StayDetails?, onCheckIn: () -> Unit, onCheckOut: () -> Unit) {
+private fun LivingIn(stay: StayDetails?, onCheckIn: () -> Unit, onMove: () -> Unit, onCheckOut: () -> Unit) {
     Column(Modifier.padding(16.dp)) {
         Text(stringResource(R.string.living_in), style = MaterialTheme.typography.labelMedium)
-        if (place == null) {
+        if (stay == null) {
             Text(stringResource(R.string.not_housed), style = MaterialTheme.typography.titleMedium)
             Button(onClick = onCheckIn, modifier = Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.check_in)) }
         } else {
             Text(
-                BedDetails(place.bed, place.room, place.property).describe(),
+                stay.place.describe(),
                 style = MaterialTheme.typography.titleMedium,
             )
-            Text(stringResource(R.string.since_date, place.stay.checkIn.display()))
+            Text(stringResource(R.string.since_date, stay.stay.checkIn.display()))
             Row(Modifier.padding(top = 8.dp)) {
+                OutlinedButton(onClick = onMove, modifier = Modifier.padding(end = 8.dp)) { Text(stringResource(R.string.move)) }
                 OutlinedButton(onClick = onCheckOut) { Text(stringResource(R.string.check_out)) }
             }
         }

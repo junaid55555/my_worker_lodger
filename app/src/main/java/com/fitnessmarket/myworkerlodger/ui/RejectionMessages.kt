@@ -24,6 +24,7 @@ fun Rejection.messageRes(): Int = when (this) {
     Rejection.WorkerNotHoused -> R.string.rejection_worker_not_housed
     Rejection.CheckOutBeforeCheckIn -> R.string.rejection_check_out_before_check_in
     Rejection.OverlappingStay -> R.string.rejection_overlapping_stay
+    Rejection.AlreadyInThatBed -> R.string.rejection_already_in_that_bed
 }
 
 /** How a [Sex] is shown. */

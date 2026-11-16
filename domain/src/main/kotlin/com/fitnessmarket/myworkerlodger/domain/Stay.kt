@@ -28,4 +28,8 @@ data class Stay(
 data class BedDetails(val bed: Bed, val room: Room, val property: Property)
 
 /** A Stay together with where it is: its Bed, that Bed's Room, and that Room's Property. */
-data class StayDetails(val stay: Stay, val bed: Bed, val room: Room, val property: Property)
+data class StayDetails(val stay: Stay, val place: BedDetails) {
+    val bed: Bed get() = place.bed
+    val room: Room get() = place.room
+    val property: Property get() = place.property
+}

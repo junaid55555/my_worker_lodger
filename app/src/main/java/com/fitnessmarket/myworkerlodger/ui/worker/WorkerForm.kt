@@ -36,7 +36,7 @@ import com.fitnessmarket.myworkerlodger.ui.messageRes
 
 /**
  * The add/edit Worker dialog. When [workerId] is null a new Worker is being added; otherwise only
- * the Staff Number and name of that Worker are being edited.
+ * that Worker's Staff Number, name and sex are being edited.
  */
 data class WorkerForm(
     val workerId: WorkerId? = null,
@@ -73,7 +73,7 @@ fun ViewModel.saveWorkerForm(
             if (form.workerId == null) {
                 housing.addWorker(checkNotNull(employerId), form.staffNumber, form.name, form.sex)
             } else {
-                housing.editWorker(form.workerId, form.staffNumber, form.name)
+                housing.editWorker(form.workerId, form.staffNumber, form.name, form.sex)
             }
         },
         onRejected = { onError(it.messageRes()) },
@@ -112,7 +112,7 @@ fun WorkerFormDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                if (form.adding) SexChoice(selected = form.sex, onSelect = { onChange(form.copy(sex = it)) })
+                SexChoice(selected = form.sex, onSelect = { onChange(form.copy(sex = it, error = null)) })
                 form.error?.let {
                     Text(
                         stringResource(it),

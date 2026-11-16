@@ -18,6 +18,7 @@ import com.fitnessmarket.myworkerlodger.R
 import com.fitnessmarket.myworkerlodger.domain.Outcome
 import com.fitnessmarket.myworkerlodger.ui.messageRes
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -38,8 +39,12 @@ class Deletion(private val scope: CoroutineScope, private val command: () -> Out
 
     fun cancel() = _state.update { DeletionState() }
 
+    /** The deletion under way, so a second tap on Delete doesn't run it twice. */
+    private var running: Job? = null
+
     fun confirm() {
-        scope.launch {
+        if (running?.isActive == true) return
+        running = scope.launch {
             when (val outcome = onIo(command)) {
                 is Outcome.Accepted -> _state.update { DeletionState(deleted = true) }
                 is Outcome.Rejected -> _state.update { it.copy(error = outcome.rejection.messageRes()) }

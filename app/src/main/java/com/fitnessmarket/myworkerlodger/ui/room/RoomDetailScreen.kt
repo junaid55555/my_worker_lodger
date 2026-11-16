@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fitnessmarket.myworkerlodger.R
@@ -28,6 +27,8 @@ import com.fitnessmarket.myworkerlodger.domain.PropertyId
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Sex
+import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
+import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntryDialog
 import com.fitnessmarket.myworkerlodger.ui.labelRes
@@ -38,10 +39,7 @@ fun RoomDetailScreen(
     onBack: () -> Unit,
     viewModel: RoomDetailViewModel = viewModel(factory = RoomDetailViewModel.Factory),
 ) {
-    LifecycleResumeEffect(Unit) {
-        viewModel.refresh()
-        onPauseOrDispose {}
-    }
+    RefreshOnResume(viewModel::refresh)
     val state by viewModel.state.collectAsStateWithLifecycle()
     RoomDetailContent(
         state = state,
@@ -103,11 +101,7 @@ private fun RoomDetailContent(
             state.beds.isEmpty() -> R.string.no_beds_yet
             else -> null
         }
-        if (message != null) {
-            Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text(stringResource(message))
-            }
-        } else {
+        ContentOrMessage(innerPadding, message) {
             LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) {
                 items(state.beds, key = { it.id.value }) { bed ->
                     ListItem(

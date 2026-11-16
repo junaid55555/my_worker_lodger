@@ -8,7 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.fitnessmarket.myworkerlodger.WorkerLodgerApplication
 import com.fitnessmarket.myworkerlodger.domain.Housing
-import com.fitnessmarket.myworkerlodger.domain.Outcome
+import com.fitnessmarket.myworkerlodger.ui.common.runCommand
 import com.fitnessmarket.myworkerlodger.domain.Property
 import com.fitnessmarket.myworkerlodger.domain.PropertyId
 import com.fitnessmarket.myworkerlodger.domain.Room
@@ -74,22 +74,19 @@ class PropertyDetailViewModel(private val housing: Housing, private val property
 
     fun save() {
         val dialog = _state.value.dialog ?: return
-        viewModelScope.launch {
-            val outcome = onIo {
+        runCommand(
+            command = {
                 when (dialog) {
                     is PropertyDialog.Rename -> housing.renameProperty(propertyId, dialog.entry.text)
                     is PropertyDialog.AddRoom -> housing.addRoom(propertyId, dialog.entry.text, dialog.sex)
                 }
-            }
-            when (outcome) {
-                is Outcome.Accepted -> {
-                    _state.update { it.copy(dialog = null) }
-                    refresh()
-                }
-                is Outcome.Rejected -> _state.update { state ->
-                    state.copy(dialog = state.dialog?.run { withEntry(entry.rejected(outcome.rejection)) })
-                }
-            }
+            },
+            onRejected = { rejection ->
+                _state.update { state -> state.copy(dialog = state.dialog?.run { withEntry(entry.rejected(rejection)) }) }
+            },
+        ) {
+            closeDialog()
+            refresh()
         }
     }
 

@@ -18,4 +18,12 @@ interface HousingStore {
 
     /** Saves all [beds] together: either every one is saved or none is. */
     fun saveBeds(beds: List<Bed>)
+
+    fun employer(id: EmployerId): Employer?
+    fun employers(): List<Employer>
+    fun saveEmployer(employer: Employer)
+
+    fun worker(id: WorkerId): Worker?
+    fun workers(): List<Worker>
+    fun saveWorker(worker: Worker)
 }

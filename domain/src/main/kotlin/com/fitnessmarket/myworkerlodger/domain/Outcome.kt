@@ -22,4 +22,16 @@ sealed interface Rejection {
 
     /** The Bed the command refers to doesn't exist. */
     data object BedNotFound : Rejection
+
+    /** The Employer the command refers to doesn't exist. */
+    data object EmployerNotFound : Rejection
+
+    /** The Worker the command refers to doesn't exist. */
+    data object WorkerNotFound : Rejection
+
+    /** A Staff Number was empty or only whitespace. */
+    data object BlankStaffNumber : Rejection
+
+    /** Another Worker of the same Employer already has this Staff Number. */
+    data object DuplicateStaffNumber : Rejection
 }

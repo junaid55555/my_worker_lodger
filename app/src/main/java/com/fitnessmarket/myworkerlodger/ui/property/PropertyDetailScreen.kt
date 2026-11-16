@@ -24,7 +24,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fitnessmarket.myworkerlodger.R
@@ -33,6 +32,9 @@ import com.fitnessmarket.myworkerlodger.domain.PropertyId
 import com.fitnessmarket.myworkerlodger.domain.Room
 import com.fitnessmarket.myworkerlodger.domain.RoomId
 import com.fitnessmarket.myworkerlodger.domain.Sex
+import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
+import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
+import com.fitnessmarket.myworkerlodger.ui.common.SexChoice
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntryDialog
 import com.fitnessmarket.myworkerlodger.ui.labelRes
@@ -44,10 +46,7 @@ fun PropertyDetailScreen(
     onOpenRoom: (RoomId) -> Unit,
     viewModel: PropertyDetailViewModel = viewModel(factory = PropertyDetailViewModel.Factory),
 ) {
-    LifecycleResumeEffect(Unit) {
-        viewModel.refresh()
-        onPauseOrDispose {}
-    }
+    RefreshOnResume(viewModel::refresh)
     val state by viewModel.state.collectAsStateWithLifecycle()
     PropertyDetailContent(
         state = state,
@@ -108,11 +107,7 @@ private fun PropertyDetailContent(
             state.rooms.isEmpty() -> R.string.no_rooms_yet
             else -> null
         }
-        if (message != null) {
-            Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text(stringResource(message))
-            }
-        } else {
+        ContentOrMessage(innerPadding, message) {
             LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) {
                 items(state.rooms, key = { it.id.value }) { room ->
                     ListItem(
@@ -122,23 +117,6 @@ private fun PropertyDetailContent(
                     )
                     HorizontalDivider()
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SexChoice(selected: Sex, onSelect: (Sex) -> Unit) {
-    Row(Modifier.selectableGroup().padding(top = 8.dp)) {
-        Sex.entries.forEach { sex ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .selectable(selected = sex == selected, onClick = { onSelect(sex) }, role = Role.RadioButton)
-                    .padding(end = 16.dp),
-            ) {
-                RadioButton(selected = sex == selected, onClick = null)
-                Text(stringResource(sex.labelRes()))
             }
         }
     }

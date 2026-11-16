@@ -74,4 +74,66 @@ class Housing(
 
     fun rooms(propertyId: PropertyId): List<Room> =
         store.rooms(propertyId).sortedWith(compareBy(NaturalOrder) { it.name })
+
+    fun addEmployer(name: String): Outcome<Employer> {
+        if (name.isBlank()) return Outcome.Rejected(Rejection.BlankName)
+        val employer = Employer(EmployerId(UUID.randomUUID().toString()), name.trim())
+        store.saveEmployer(employer)
+        return Outcome.Accepted(employer)
+    }
+
+    fun renameEmployer(id: EmployerId, name: String): Outcome<Employer> {
+        val employer = store.employer(id) ?: return Outcome.Rejected(Rejection.EmployerNotFound)
+        if (name.isBlank()) return Outcome.Rejected(Rejection.BlankName)
+        val renamed = employer.copy(name = name.trim())
+        store.saveEmployer(renamed)
+        return Outcome.Accepted(renamed)
+    }
+
+    fun employer(id: EmployerId): Employer? = store.employer(id)
+
+    fun addWorker(employerId: EmployerId, staffNumber: String, name: String, sex: Sex): Outcome<Worker> {
+        if (store.employer(employerId) == null) return Outcome.Rejected(Rejection.EmployerNotFound)
+        if (staffNumber.isBlank()) return Outcome.Rejected(Rejection.BlankStaffNumber)
+        if (name.isBlank()) return Outcome.Rejected(Rejection.BlankName)
+        if (staffNumberTaken(employerId, staffNumber)) return Outcome.Rejected(Rejection.DuplicateStaffNumber)
+        val worker = Worker(WorkerId(UUID.randomUUID().toString()), employerId, staffNumber.trim(), name.trim(), sex)
+        store.saveWorker(worker)
+        return Outcome.Accepted(worker)
+    }
+
+    fun editWorker(id: WorkerId, staffNumber: String, name: String): Outcome<Worker> {
+        val worker = store.worker(id) ?: return Outcome.Rejected(Rejection.WorkerNotFound)
+        if (staffNumber.isBlank()) return Outcome.Rejected(Rejection.BlankStaffNumber)
+        if (name.isBlank()) return Outcome.Rejected(Rejection.BlankName)
+        if (staffNumberTaken(worker.employerId, staffNumber, except = id)) {
+            return Outcome.Rejected(Rejection.DuplicateStaffNumber)
+        }
+        val edited = worker.copy(staffNumber = staffNumber.trim(), name = name.trim())
+        store.saveWorker(edited)
+        return Outcome.Accepted(edited)
+    }
+
+    fun worker(id: WorkerId): Worker? = store.worker(id)
+
+    /** Staff Numbers are compared ignoring case and surrounding spaces, so "E-1042" and " e-1042" clash. */
+    private fun staffNumberTaken(employerId: EmployerId, staffNumber: String, except: WorkerId? = null): Boolean =
+        store.workers().any {
+            it.id != except && it.employerId == employerId &&
+                it.staffNumber.equals(staffNumber.trim(), ignoreCase = true)
+        }
+
+    /**
+     * Workers in natural order of name, optionally only those of one [employer], and only those whose
+     * name or Staff Number contains [search] (ignoring case). A blank [search] matches everyone.
+     */
+    fun workers(employer: EmployerId? = null, search: String = ""): List<Worker> {
+        val text = search.trim()
+        return store.workers()
+            .filter { employer == null || it.employerId == employer }
+            .filter { it.name.contains(text, ignoreCase = true) || it.staffNumber.contains(text, ignoreCase = true) }
+            .sortedWith(compareBy(NaturalOrder) { it.name })
+    }
+
+    fun employers(): List<Employer> = store.employers().sortedWith(compareBy(NaturalOrder) { it.name })
 }

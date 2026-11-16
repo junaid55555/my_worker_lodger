@@ -5,6 +5,7 @@
     <string name="cancel">Cancel</string>
     <string name="back">Back</string>
     <string name="rename">Rename</string>
+    <string name="edit">Edit</string>
 
     <string name="properties_title">Properties</string>
     <string name="no_properties_yet">No Properties yet. Add your first one.</string>
@@ -28,9 +29,35 @@
     <string name="bed_labels_hint">To add several Beds, separate the labels with commas, for example 1A, 1B, 2A.</string>
     <string name="bed_title">Bed %1$s</string>
 
+    <string name="employers_title">Employers</string>
+    <string name="no_employers_yet">No Employers yet. Add the companies whose Workers you house.</string>
+    <string name="no_employers_yet_short">Add an Employer first</string>
+    <string name="add_employer">Add Employer</string>
+    <string name="rename_employer">Rename Employer</string>
+    <string name="employer_name">Employer name</string>
+    <string name="employer">Employer</string>
+
+    <string name="workers_title">Workers</string>
+    <string name="no_workers_yet">No Workers yet. Add a Worker here or from their Employer.</string>
+    <string name="no_workers_for_employer">No Workers for this Employer yet.</string>
+    <string name="no_matching_workers">No Workers match your search.</string>
+    <string name="search_workers">Search by name or Staff Number</string>
+    <string name="add_worker">Add Worker</string>
+    <string name="edit_worker">Edit Worker</string>
+    <string name="worker_name">Name</string>
+    <string name="staff_number">Staff Number</string>
+    <string name="staff_number_value">Staff Number %1$s</string>
+    <string name="worker_summary">%1$s · Staff Number %2$s</string>
+    <string name="sex">Sex</string>
+    <string name="choose_an_employer">Choose the Worker\'s Employer.</string>
+
     <string name="rejection_blank_name">A name can\'t be blank. Enter a name.</string>
     <string name="rejection_blank_label">A Bed label can\'t be blank. Enter a label for every Bed.</string>
     <string name="rejection_property_not_found">This Property no longer exists.</string>
     <string name="rejection_room_not_found">This Room no longer exists.</string>
     <string name="rejection_bed_not_found">This Bed no longer exists.</string>
+    <string name="rejection_employer_not_found">This Employer no longer exists.</string>
+    <string name="rejection_worker_not_found">This Worker no longer exists.</string>
+    <string name="rejection_blank_staff_number">A Staff Number can\'t be blank. Enter the number the Employer gave this Worker.</string>
+    <string name="rejection_duplicate_staff_number">Another Worker of this Employer already has this Staff Number.</string>
 </resources>

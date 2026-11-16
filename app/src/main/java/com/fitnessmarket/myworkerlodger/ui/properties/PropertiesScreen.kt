@@ -1,7 +1,6 @@
 package com.fitnessmarket.myworkerlodger.ui.properties
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,16 +12,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fitnessmarket.myworkerlodger.R
 import com.fitnessmarket.myworkerlodger.domain.Property
 import com.fitnessmarket.myworkerlodger.domain.PropertyId
+import com.fitnessmarket.myworkerlodger.ui.common.ContentOrMessage
+import com.fitnessmarket.myworkerlodger.ui.common.RefreshOnResume
 import com.fitnessmarket.myworkerlodger.ui.common.ScreenTopBar
 import com.fitnessmarket.myworkerlodger.ui.common.TextEntryDialog
 import com.fitnessmarket.myworkerlodger.ui.theme.MyWorkerLodgerTheme
@@ -32,10 +31,7 @@ fun PropertiesScreen(
     onOpenProperty: (PropertyId) -> Unit,
     viewModel: PropertiesViewModel = viewModel(factory = PropertiesViewModel.Factory),
 ) {
-    LifecycleResumeEffect(Unit) {
-        viewModel.refresh()
-        onPauseOrDispose {}
-    }
+    RefreshOnResume(viewModel::refresh)
     val state by viewModel.state.collectAsStateWithLifecycle()
     PropertiesContent(state, onOpenProperty, viewModel::startAdding)
     state.newProperty?.let { entry ->
@@ -59,11 +55,7 @@ private fun PropertiesContent(state: PropertiesUiState, onOpenProperty: (Propert
             ExtendedFloatingActionButton(onClick = onAdd) { Text(stringResource(R.string.add_property)) }
         },
     ) { innerPadding ->
-        if (state.properties.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.no_properties_yet))
-            }
-        } else {
+        ContentOrMessage(innerPadding, R.string.no_properties_yet.takeIf { state.loaded && state.properties.isEmpty() }) {
             LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) {
                 items(state.properties, key = { it.id.value }) { property ->
                     ListItem(
@@ -83,6 +75,7 @@ private fun PropertiesPreview() {
     MyWorkerLodgerTheme {
         PropertiesContent(
             state = PropertiesUiState(
+                loaded = true,
                 properties = listOf(
                     Property(PropertyId("1"), "Al Quoz Block A"),
                     Property(PropertyId("2"), "Jebel Ali Block 3"),

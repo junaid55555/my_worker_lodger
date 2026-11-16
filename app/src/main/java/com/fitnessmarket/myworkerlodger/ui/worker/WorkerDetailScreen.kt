@@ -1,6 +1,7 @@
 package com.fitnessmarket.myworkerlodger.ui.worker
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +38,7 @@ import com.fitnessmarket.myworkerlodger.domain.Housing
 import com.fitnessmarket.myworkerlodger.domain.Outcome
 import com.fitnessmarket.myworkerlodger.domain.Stay
 import com.fitnessmarket.myworkerlodger.domain.StayDetails
+import com.fitnessmarket.myworkerlodger.domain.StayId
 import com.fitnessmarket.myworkerlodger.domain.Today
 import com.fitnessmarket.myworkerlodger.domain.Worker
 import com.fitnessmarket.myworkerlodger.domain.WorkerId
@@ -49,6 +51,7 @@ import com.fitnessmarket.myworkerlodger.ui.common.runCommand
 import com.fitnessmarket.myworkerlodger.ui.labelRes
 import com.fitnessmarket.myworkerlodger.ui.messageRes
 import com.fitnessmarket.myworkerlodger.ui.navigation.Routes
+import com.fitnessmarket.myworkerlodger.ui.stayDates
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +65,8 @@ data class WorkerDetailUiState(
     val employer: Employer? = null,
     /** The Worker's current Stay, or null if they aren't housed. */
     val currentStay: StayDetails? = null,
+    /** Every Stay the Worker has had, most recent first. */
+    val history: List<StayDetails> = emptyList(),
     val dialog: WorkerDialog? = null,
 )
 
@@ -93,6 +98,14 @@ sealed interface WorkerDialog {
     ) : WorkerDialog
 
     data class CheckOut(val date: LocalDate, @StringRes val error: Int? = null) : WorkerDialog
+
+    /** Correcting the dates of a Stay; [checkOut] is null for the current Stay, which keeps none. */
+    data class CorrectStay(
+        val stayId: StayId,
+        val checkIn: LocalDate,
+        val checkOut: LocalDate?,
+        @StringRes val error: Int? = null,
+    ) : WorkerDialog
 }
 
 /** Shows one Worker and where they live, and lets the Accommodation Manager edit, check in or check out. */
@@ -109,11 +122,17 @@ class WorkerDetailViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            val (worker, employer, currentStay) = onIo {
+            val loaded = onIo {
                 val worker = housing.worker(workerId)
-                Triple(worker, worker?.let { housing.employer(it.employerId) }, housing.currentStay(workerId))
+                WorkerDetailUiState(
+                    loaded = true,
+                    worker = worker,
+                    employer = worker?.let { housing.employer(it.employerId) },
+                    currentStay = housing.currentStay(workerId),
+                    history = housing.staysOf(workerId),
+                )
             }
-            _state.update { it.copy(loaded = true, worker = worker, employer = employer, currentStay = currentStay) }
+            _state.update { loaded.copy(dialog = it.dialog) }
         }
     }
 
@@ -136,6 +155,12 @@ class WorkerDetailViewModel(
     }
 
     fun startCheckOut() = open(WorkerDialog.CheckOut(date = todayDate))
+
+    fun startCorrecting(stay: Stay) = open(WorkerDialog.CorrectStay(stay.id, stay.checkIn, stay.checkOut))
+
+    fun changeCheckIn(date: LocalDate) = updateDialog<WorkerDialog.CorrectStay> { it.copy(checkIn = date, error = null) }
+
+    fun changeCheckOut(date: LocalDate) = updateDialog<WorkerDialog.CorrectStay> { it.copy(checkOut = date, error = null) }
 
     fun selectBed(bedId: BedId) = updateDialog<WorkerDialog.ChooseBed> { it.copy(bedId = bedId, error = null) }
 
@@ -163,6 +188,10 @@ class WorkerDetailViewModel(
             }
             is WorkerDialog.CheckOut -> runCommand(
                 command = { housing.checkOut(workerId, dialog.date) },
+                onRejected = { open(dialog.copy(error = it.messageRes())) },
+            ) { closeAndRefresh() }
+            is WorkerDialog.CorrectStay -> runCommand(
+                command = { housing.correctStay(dialog.stayId, dialog.checkIn, dialog.checkOut) },
                 onRejected = { open(dialog.copy(error = it.messageRes())) },
             ) { closeAndRefresh() }
             null -> Unit
@@ -216,13 +245,14 @@ fun WorkerDetailScreen(
                     Detail(R.string.employer, state.employer?.name.orEmpty())
                     Detail(R.string.staff_number, worker.staffNumber)
                     Detail(R.string.sex, stringResource(worker.sex.labelRes()))
+                    History(state.history, viewModel::startCorrecting)
                 }
             }
         }
     }
     when (val dialog = state.dialog) {
         is WorkerDialog.Edit -> WorkerFormDialog(dialog.form, viewModel::changeForm, viewModel::save, viewModel::closeDialog)
-        is WorkerDialog.ChooseBed -> CheckInDialog(
+        is WorkerDialog.ChooseBed -> ChooseBedDialog(
             title = dialog.purpose.title,
             beds = dialog.beds,
             selected = dialog.bedId,
@@ -242,7 +272,39 @@ fun WorkerDetailScreen(
             onSave = viewModel::save,
             onDismiss = viewModel::closeDialog,
         )
+        is WorkerDialog.CorrectStay -> CorrectStayDialog(
+            checkIn = dialog.checkIn,
+            checkOut = dialog.checkOut,
+            today = viewModel.todayDate,
+            error = dialog.error,
+            onCheckInChange = viewModel::changeCheckIn,
+            onCheckOutChange = viewModel::changeCheckOut,
+            onSave = viewModel::save,
+            onDismiss = viewModel::closeDialog,
+        )
         null -> Unit
+    }
+}
+
+/** The Worker's Stays, most recent first; tapping one corrects its dates. */
+@Composable
+private fun History(history: List<StayDetails>, onCorrect: (Stay) -> Unit) {
+    HorizontalDivider()
+    Text(
+        stringResource(R.string.stay_history),
+        style = MaterialTheme.typography.titleSmall,
+        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
+    )
+    if (history.isEmpty()) {
+        Text(stringResource(R.string.no_stays_for_worker), modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+    }
+    history.forEach { details ->
+        ListItem(
+            headlineContent = { Text(details.place.describe()) },
+            supportingContent = { Text(details.stay.stayDates()) },
+            trailingContent = { Text(stringResource(R.string.correct)) },
+            modifier = Modifier.clickable { onCorrect(details.stay) },
+        )
     }
 }
 

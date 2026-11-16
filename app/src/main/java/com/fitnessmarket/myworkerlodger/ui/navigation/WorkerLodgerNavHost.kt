@@ -28,6 +28,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.fitnessmarket.myworkerlodger.R
+import com.fitnessmarket.myworkerlodger.ui.bed.BedDetailScreen
 import com.fitnessmarket.myworkerlodger.ui.employer.EmployerDetailScreen
 import com.fitnessmarket.myworkerlodger.ui.employers.EmployersScreen
 import com.fitnessmarket.myworkerlodger.ui.properties.PropertiesScreen
@@ -40,12 +41,14 @@ import com.fitnessmarket.myworkerlodger.ui.workers.WorkersScreen
 object Routes {
     const val PROPERTY_ID = "propertyId"
     const val ROOM_ID = "roomId"
+    const val BED_ID = "bedId"
     const val EMPLOYER_ID = "employerId"
     const val WORKER_ID = "workerId"
 
     const val PROPERTIES = "properties"
     const val PROPERTY = "property/{$PROPERTY_ID}"
     const val ROOM = "room/{$ROOM_ID}"
+    const val BED = "bed/{$BED_ID}"
     const val WORKERS = "workers"
     const val WORKER = "worker/{$WORKER_ID}"
     const val EMPLOYERS = "employers"
@@ -53,6 +56,7 @@ object Routes {
 
     fun property(id: String) = "property/$id"
     fun room(id: String) = "room/$id"
+    fun bed(id: String) = "bed/$id"
     fun worker(id: String) = "worker/$id"
     fun employer(id: String) = "employer/$id"
 }
@@ -103,7 +107,16 @@ fun WorkerLodgerNavHost() {
                 )
             }
             composable(Routes.ROOM, arguments = listOf(stringArgument(Routes.ROOM_ID))) {
-                RoomDetailScreen(onBack = { navController.popBackStack() })
+                RoomDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenBed = { navController.navigate(Routes.bed(it.value)) },
+                )
+            }
+            composable(Routes.BED, arguments = listOf(stringArgument(Routes.BED_ID))) {
+                BedDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenWorker = { navController.navigate(Routes.worker(it.value)) },
+                )
             }
             composable(Routes.WORKERS) {
                 WorkersScreen(onOpenWorker = { navController.navigate(Routes.worker(it.value)) })

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.OutlinedTextField
@@ -48,6 +49,8 @@ import kotlinx.coroutines.launch
 data class WorkersUiState(
     val loaded: Boolean = false,
     val search: String = "",
+    /** Only Workers with a current Stay; on by default, so former Workers don't clutter the list. */
+    val housedOnly: Boolean = true,
     val workers: List<Worker> = emptyList(),
     val employers: List<Employer> = emptyList(),
     val workerForm: WorkerForm? = null,
@@ -65,12 +68,17 @@ class WorkersViewModel(private val housing: Housing) : ViewModel() {
     private var loading: Job? = null
 
     fun refresh() {
-        val search = _state.value.search
+        val (search, housedOnly) = _state.value.let { it.search to it.housedOnly }
         loading?.cancel()
         loading = viewModelScope.launch {
-            val (workers, employers) = onIo { housing.workers(search = search) to housing.employers() }
+            val (workers, employers) = onIo { housing.workers(search = search, housedOnly = housedOnly) to housing.employers() }
             _state.update { it.copy(loaded = true, workers = workers, employers = employers) }
         }
+    }
+
+    fun showHousedOnly(housedOnly: Boolean) {
+        _state.update { it.copy(housedOnly = housedOnly) }
+        refresh()
     }
 
     fun search(text: String) {
@@ -121,9 +129,16 @@ fun WorkersScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             )
+            FilterChip(
+                selected = state.housedOnly,
+                onClick = { viewModel.showHousedOnly(!state.housedOnly) },
+                label = { Text(stringResource(R.string.housed_now)) },
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
             val message = when {
                 !state.loaded || state.workers.isNotEmpty() -> null
                 state.search.isNotBlank() -> R.string.no_matching_workers
+                state.housedOnly -> R.string.no_housed_workers
                 else -> R.string.no_workers_yet
             }
             ContentOrMessage(PaddingValues(), message) {

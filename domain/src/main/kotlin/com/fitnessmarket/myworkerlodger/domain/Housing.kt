@@ -62,10 +62,20 @@ class Housing(
 
     fun relabelBed(id: BedId, label: String): Outcome<Bed> {
         val bed = store.bed(id) ?: return Outcome.Rejected(Rejection.BedNotFound)
+        return editBed(id, label, bed.inService)
+    }
+
+    /**
+     * Changes a Bed's label and whether it's in service, together: either both change or neither does.
+     * A Bed with a current Stay can't be marked Out of Service.
+     */
+    fun editBed(id: BedId, label: String, inService: Boolean): Outcome<Bed> {
+        val bed = store.bed(id) ?: return Outcome.Rejected(Rejection.BedNotFound)
         if (label.isBlank()) return Outcome.Rejected(Rejection.BlankLabel)
-        val relabelled = bed.copy(label = label.trim())
-        store.saveBeds(listOf(relabelled))
-        return Outcome.Accepted(relabelled)
+        if (!inService && hasCurrentStay(id, store.stays())) return Outcome.Rejected(Rejection.BedOccupied)
+        val edited = bed.copy(label = label.trim(), inService = inService)
+        store.saveBeds(listOf(edited))
+        return Outcome.Accepted(edited)
     }
 
     /** Marks a Bed Out of Service, for example because it's broken, so no Worker can check in to it. */
@@ -75,11 +85,11 @@ class Housing(
 
     private fun setInService(id: BedId, inService: Boolean): Outcome<Bed> {
         val bed = store.bed(id) ?: return Outcome.Rejected(Rejection.BedNotFound)
-        if (!inService && store.stays().any { it.bedId == id && it.isCurrent }) return Outcome.Rejected(Rejection.BedOccupied)
-        val changed = bed.copy(inService = inService)
-        store.saveBeds(listOf(changed))
-        return Outcome.Accepted(changed)
+        return editBed(id, bed.label, inService)
     }
+
+    /** Whether someone is staying in the Bed now. */
+    private fun hasCurrentStay(bedId: BedId, stays: List<Stay>): Boolean = stays.any { it.bedId == bedId && it.isCurrent }
 
     fun beds(roomId: RoomId): List<Bed> = store.beds(roomId).sortedWith(compareBy(NaturalOrder) { it.label })
 
@@ -156,7 +166,7 @@ class Housing(
         return when {
             date.isAfter(today.date()) -> Rejection.FutureDate
             stays.any { it.workerId == workerId && it.isCurrent } -> Rejection.WorkerAlreadyHoused
-            stays.any { it.bedId == bedId && it.isCurrent } -> Rejection.BedOccupied
+            hasCurrentStay(bedId, stays) -> Rejection.BedOccupied
             !bed.inService -> Rejection.BedOutOfService
             worker.sex != room.sex -> Rejection.SexMismatch
             stays.any { (it.workerId == workerId || it.bedId == bedId) && it.overlaps(date, until = null) } ->
@@ -190,6 +200,34 @@ class Housing(
     fun staysOf(workerId: WorkerId): List<StayDetails> =
         store.stays().filter { it.workerId == workerId }.sortedByDescending { it.checkIn }.mapNotNull(::details)
 
+    /**
+     * Corrects the dates of a Stay entered wrongly. A current Stay keeps no Check-out ([checkOut] must
+     * be null) and an ended Stay keeps one: Check-out and Check-in, not corrections, end and start Stays.
+     */
+    fun correctStay(id: StayId, checkIn: LocalDate, checkOut: LocalDate?): Outcome<Stay> {
+        val stays = store.stays()
+        val stay = stays.firstOrNull { it.id == id } ?: return Outcome.Rejected(Rejection.StayNotFound)
+        val problem = when {
+            stay.isCurrent && checkOut != null -> Rejection.StayIsCurrent
+            !stay.isCurrent && checkOut == null -> Rejection.CheckOutRequired
+            checkIn.isAfter(today.date()) || checkOut?.isAfter(today.date()) == true -> Rejection.FutureDate
+            checkOut != null && checkOut.isBefore(checkIn) -> Rejection.CheckOutBeforeCheckIn
+            stays.any {
+                it.id != id && (it.workerId == stay.workerId || it.bedId == stay.bedId) && it.overlaps(checkIn, checkOut)
+            } -> Rejection.OverlappingStay
+            else -> null
+        }
+        if (problem != null) return Outcome.Rejected(problem)
+        val corrected = stay.copy(checkIn = checkIn, checkOut = checkOut)
+        store.saveStays(listOf(corrected))
+        return Outcome.Accepted(corrected)
+    }
+
+    /** Every Stay there has been in the Bed, with its Worker, most recent Check-in first. */
+    fun staysInBed(bedId: BedId): List<BedStay> =
+        store.stays().filter { it.bedId == bedId }.sortedByDescending { it.checkIn }
+            .mapNotNull { stay -> store.worker(stay.workerId)?.let { BedStay(stay, it) } }
+
     /** Where the Worker is living now, or null if they have no current Stay. */
     fun currentStay(workerId: WorkerId): StayDetails? = currentStayOf(workerId)?.let(::details)
 
@@ -219,12 +257,15 @@ class Housing(
             .toMap()
     }
 
-    private fun details(stay: Stay): StayDetails? {
-        val bed = store.bed(stay.bedId) ?: return null
+    /** The Bed with its Room and Property, or null if there's no such Bed. */
+    fun bedDetails(bedId: BedId): BedDetails? {
+        val bed = store.bed(bedId) ?: return null
         val room = store.room(bed.roomId) ?: return null
         val property = store.property(room.propertyId) ?: return null
-        return StayDetails(stay, BedDetails(bed, room, property))
+        return BedDetails(bed, room, property)
     }
+
+    private fun details(stay: Stay): StayDetails? = bedDetails(stay.bedId)?.let { StayDetails(stay, it) }
 
     /** Staff Numbers are compared ignoring case and surrounding spaces, so "E-1042" and " e-1042" clash. */
     private fun staffNumberTaken(employerId: EmployerId, staffNumber: String, except: WorkerId?): Boolean =
@@ -244,12 +285,15 @@ class Housing(
 
     /**
      * Workers in natural order of name, optionally only those of one Employer ([employerId]), and only those whose
-     * name or Staff Number contains [search] (ignoring case). A blank [search] matches everyone.
+     * name or Staff Number contains [search] (ignoring case), and only those with a current Stay when
+     * [housedOnly]. A blank [search] matches everyone.
      */
-    fun workers(employerId: EmployerId? = null, search: String = ""): List<Worker> {
+    fun workers(employerId: EmployerId? = null, search: String = "", housedOnly: Boolean = false): List<Worker> {
         val text = search.trim()
+        val housed = if (housedOnly) store.stays().filter { it.isCurrent }.map { it.workerId }.toSet() else emptySet()
         return store.workers()
             .filter { employerId == null || it.employerId == employerId }
+            .filter { !housedOnly || it.id in housed }
             .filter { it.name.contains(text, ignoreCase = true) || it.staffNumber.contains(text, ignoreCase = true) }
             .sortedWith(compareBy(NaturalOrder) { it.name })
     }

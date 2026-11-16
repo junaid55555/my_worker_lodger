@@ -33,3 +33,6 @@ data class StayDetails(val stay: Stay, val place: BedDetails) {
     val room: Room get() = place.room
     val property: Property get() = place.property
 }
+
+/** A Stay together with the Worker who stayed, as listed in a Bed's history. */
+data class BedStay(val stay: Stay, val worker: Worker)

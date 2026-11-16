@@ -61,4 +61,13 @@ sealed interface Rejection {
 
     /** The Bed is Out of Service, so no Worker can check in to it. */
     data object BedOutOfService : Rejection
+
+    /** The Stay the command refers to doesn't exist. */
+    data object StayNotFound : Rejection
+
+    /** A correction gave a current Stay a Check-out; ending a Stay is done with Check-out instead. */
+    data object StayIsCurrent : Rejection
+
+    /** A correction removed the Check-out of an ended Stay; an ended Stay always has one. */
+    data object CheckOutRequired : Rejection
 }

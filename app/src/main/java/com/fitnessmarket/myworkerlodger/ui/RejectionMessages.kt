@@ -26,6 +26,9 @@ fun Rejection.messageRes(): Int = when (this) {
     Rejection.OverlappingStay -> R.string.rejection_overlapping_stay
     Rejection.AlreadyInThatBed -> R.string.rejection_already_in_that_bed
     Rejection.BedOutOfService -> R.string.rejection_bed_out_of_service
+    Rejection.StayNotFound -> R.string.rejection_stay_not_found
+    Rejection.StayIsCurrent -> R.string.rejection_stay_is_current
+    Rejection.CheckOutRequired -> R.string.rejection_check_out_required
 }
 
 /** How a [Sex] is shown. */
